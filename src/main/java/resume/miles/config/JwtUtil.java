@@ -14,7 +14,7 @@ import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
 import resume.miles.superadmin.dto.SuperAdminResponseDTO;
-import resume.miles.userregister.dto.DoctorDto;
+import resume.miles.userregister.dto.UserDto;
 
 @Component
 public class JwtUtil {
@@ -55,7 +55,7 @@ public class JwtUtil {
     }
 
 
-      public String generateDoctorToken(DoctorDto doctorDto) {
+      public String generateDoctorToken(UserDto doctorDto) {
         Map<String, Object> claims = new HashMap<>();
         // You can add roles or other info to claims here if needed
             claims.put("id", doctorDto.getId()); 

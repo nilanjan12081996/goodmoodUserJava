@@ -6,16 +6,16 @@ import java.util.Random;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import resume.miles.userregister.dto.DoctorDto;
+import resume.miles.userregister.dto.UserDto;
 import resume.miles.userregister.entity.UserEntity;
-import resume.miles.userregister.mapper.DoctorMapper;
-import resume.miles.userregister.repository.DoctorRepository;
+import resume.miles.userregister.mapper.UserMapper;
+import resume.miles.userregister.repository.UserRepository;
 
 @Service
 public class OtpService {
-    public final DoctorRepository doctorRepository;
+    public final UserRepository doctorRepository;
 
-     public OtpService(DoctorRepository doctorRepository){
+     public OtpService(UserRepository doctorRepository){
         this.doctorRepository = doctorRepository;
      }
 
@@ -31,9 +31,9 @@ public class OtpService {
         return true;
      }
 
-      public DoctorDto checkAndVerify(Long id,Integer otp){
+      public UserDto checkAndVerify(Long id,Integer otp){
         UserEntity doc =  doctorRepository.findById(id).orElseThrow(()->new RuntimeException("Id not found "+id));
-        DoctorDto data = DoctorMapper.toDto(doc);
+        UserDto data = UserMapper.toDto(doc);
         return data;
      }
      

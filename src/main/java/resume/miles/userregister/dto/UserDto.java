@@ -12,10 +12,11 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class DoctorDto {
+public class UserDto {
     private Long id;
     private String firstName;
     private String lastName;
+    private String username;
     private String email;
     private String password; 
     private String mobile;
@@ -30,7 +31,5 @@ public class DoctorDto {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
 
-    private DoctorAboutDTO doctorAbout;
-    private DoctorIdDTO doctorIds;
-    private List<DoctorBankAccountDTO> doctorAccounts;
+   
 }

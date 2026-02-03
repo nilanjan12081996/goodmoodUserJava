@@ -3,32 +3,30 @@ package resume.miles.userregister.controller;
 import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PatchMapping;
-import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import resume.miles.config.JwtUserDetails;
+
 import resume.miles.config.JwtUtil;
-import resume.miles.userregister.dto.DoctorDto;
-import resume.miles.userregister.dto.DoctorProfileDTO;
-import resume.miles.userregister.service.DoctorService;
+import resume.miles.userregister.dto.UserDto;
+
+import resume.miles.userregister.service.UserService;
 import resume.miles.userregister.service.OtpService;
 
 @RestController
-@RequestMapping("/api/doctor/register")
-public class DoctorRegisterController {
+@RequestMapping("/api/user/register")
+public class UserRegisterController {
 
-    private final DoctorService doctorService;
+    private final UserService doctorService;
 
     private final JwtUtil jwtUtills;
 
     private final OtpService otpService;
 
-    public DoctorRegisterController(DoctorService doctorService,JwtUtil jwtUtills,OtpService otpService) {
+    public UserRegisterController(UserService doctorService,JwtUtil jwtUtills,OtpService otpService) {
         this.doctorService = doctorService;
         this.jwtUtills = jwtUtills;
         this.otpService =otpService;
@@ -116,7 +114,7 @@ public class DoctorRegisterController {
             }
             int otpint = otp.intValue();
             try{ 
-                DoctorDto data = otpService.checkAndVerify(id.get("id"),otpint);
+                UserDto data = otpService.checkAndVerify(id.get("id"),otpint);
                 String token = jwtUtills.generateDoctorToken(data);
                 return ResponseEntity.status(200).body(Map.of(
                     "message","Otp send",

@@ -12,9 +12,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import resume.miles.config.JwtUserDetails;
 import resume.miles.config.JwtUtil;
-import resume.miles.userregister.dto.DoctorDto;
+import resume.miles.userregister.dto.UserDto;
 import resume.miles.userregister.dto.DoctorProfileDTO;
-import resume.miles.userregister.service.DoctorService;
+import resume.miles.userregister.service.UserService;
 import resume.miles.userregister.service.OtpService;
 
 
@@ -22,13 +22,13 @@ import resume.miles.userregister.service.OtpService;
 @RequestMapping("/api/doctor")
 public class DoctorProfile {
     
-     private final DoctorService doctorService;
+     private final UserService doctorService;
 
     private final JwtUtil jwtUtills;
 
     private final OtpService otpService;
 
-    public DoctorProfile(DoctorService doctorService,JwtUtil jwtUtills,OtpService otpService) {
+    public DoctorProfile(UserService doctorService,JwtUtil jwtUtills,OtpService otpService) {
         this.doctorService = doctorService;
         this.jwtUtills = jwtUtills;
         this.otpService =otpService;
@@ -59,29 +59,29 @@ public class DoctorProfile {
             }
     }
 
-     @GetMapping("/profile/details")
-    public ResponseEntity<?> profile(@AuthenticationPrincipal JwtUserDetails userUtil ){
-            try{
-                Long id = userUtil.getId();
-                DoctorDto data = doctorService.profileList(id);
-                return ResponseEntity.status(200).body(Map.of(
-                    "message",data,
-                    "statusCode",200,
-                    "status",true
-                ));
-            }catch(RuntimeException e){
-                return ResponseEntity.status(400).body(Map.of(
-                    "message",e.getMessage(),
-                    "statusCode",400,
-                    "status",false
-                ));
-            }catch(Exception e){
-                return ResponseEntity.status(400).body(Map.of(
-                    "message",e.getMessage(),
-                    "statusCode",400,
-                    "status",false,
-                    "error",e.getStackTrace()
-                ));
-            }
-    }
+    //  @GetMapping("/profile/details")
+    // public ResponseEntity<?> profile(@AuthenticationPrincipal JwtUserDetails userUtil ){
+    //         try{
+    //             Long id = userUtil.getId();
+    //             UserDto data = doctorService.profileList(id);
+    //             return ResponseEntity.status(200).body(Map.of(
+    //                 "message",data,
+    //                 "statusCode",200,
+    //                 "status",true
+    //             ));
+    //         }catch(RuntimeException e){
+    //             return ResponseEntity.status(400).body(Map.of(
+    //                 "message",e.getMessage(),
+    //                 "statusCode",400,
+    //                 "status",false
+    //             ));
+    //         }catch(Exception e){
+    //             return ResponseEntity.status(400).body(Map.of(
+    //                 "message",e.getMessage(),
+    //                 "statusCode",400,
+    //                 "status",false,
+    //                 "error",e.getStackTrace()
+    //             ));
+    //         }
+    // }
 }

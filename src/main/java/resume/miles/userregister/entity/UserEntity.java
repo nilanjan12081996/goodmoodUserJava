@@ -19,10 +19,10 @@ import java.util.List;
 @Builder
 public class UserEntity extends BaseEntity {
 
-    @Column(name = "f_name", nullable = false)
+    @Column(name = "f_name", nullable = true)
     private String firstName;
 
-    @Column(name = "l_name", nullable = false)
+    @Column(name = "l_name", nullable = true)
     private String lastName;
     @Column(name="username" ,nullable=false,unique=true)
     private String username;

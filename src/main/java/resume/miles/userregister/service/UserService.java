@@ -3,21 +3,21 @@ package resume.miles.userregister.service;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import resume.miles.userregister.dto.DoctorDto;
+import resume.miles.userregister.dto.UserDto;
 import resume.miles.userregister.dto.DoctorProfileDTO;
 import resume.miles.userregister.entity.UserEntity;
-import resume.miles.userregister.mapper.DoctorMapper;
-import resume.miles.userregister.repository.DoctorRepository;
+import resume.miles.userregister.mapper.UserMapper;
+import resume.miles.userregister.repository.UserRepository;
 import resume.miles.userregister.repository.specification.DoctorSpecification;
 
 @Service
-public class DoctorService {
+public class UserService {
 
-     public final DoctorRepository doctorRepository;
+     public final UserRepository doctorRepository;
 
      public final OtpService otpService;
 
-     public DoctorService(DoctorRepository doctorRepository,OtpService otpService){
+     public UserService(UserRepository doctorRepository,OtpService otpService){
         this.doctorRepository = doctorRepository;
         this.otpService = otpService;
      }
@@ -26,7 +26,7 @@ public class DoctorService {
         
         UserEntity doctorData = doctorRepository.findByMobile(mobile)
             .orElseGet(() -> {
-                UserEntity doctorDataSave = DoctorMapper.toEntityReg(mobile);
+                UserEntity doctorDataSave = UserMapper.toEntity(mobile);
                 return doctorRepository.save(doctorDataSave);
         });
         Long id = doctorData.getId();
@@ -61,9 +61,9 @@ public class DoctorService {
      }
 
      
-     public DoctorDto profileList(Long id){
-        UserEntity doctor = doctorRepository.findOne(DoctorSpecification.byIdWithDetails(id)).orElseThrow(()-> new RuntimeException("invalid id"));
-        DoctorDto data = DoctorMapper.toDtoProfile(doctor);
-        return data;
-     }
+    //  public UserDto profileList(Long id){
+    //     UserEntity doctor = doctorRepository.findOne(DoctorSpecification.byIdWithDetails(id)).orElseThrow(()-> new RuntimeException("invalid id"));
+    //     UserDto data = UserMapper.toDtoProfile(doctor);
+    //     return data;
+    //  }
 }
