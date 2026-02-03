@@ -13,8 +13,8 @@ import org.springframework.stereotype.Component;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
-import resume.miles.doctorregister.dto.DoctorDto;
 import resume.miles.superadmin.dto.SuperAdminResponseDTO;
+import resume.miles.userregister.dto.DoctorDto;
 
 @Component
 public class JwtUtil {
