@@ -1,0 +1,15 @@
+{
+    "about": {
+        "exp": 5,
+        "language": "English,Bengali,Hindi",
+        "about": "I am a heart specialist."
+    },
+    "identification": {
+        "idName": "Passport",
+        "registrationNo": "REG-999"
+    },
+    "specializations": [
+        { "specializationId": 101 },
+        { "specializationId": 102 }
+    ]
+}

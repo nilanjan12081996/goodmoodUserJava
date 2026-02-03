@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GoodMood Chunk Uploader</title>
+    <style>
+        body { font-family: 'Segoe UI', sans-serif; max-width: 600px; margin: 40px auto; padding: 20px; background: #f4f4f9; }
+        .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        h2 { margin-top: 0; color: #333; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 8px; font-weight: bold; }
+        input[type="file"] { width: 100%; padding: 10px; border: 2px dashed #ddd; border-radius: 6px; }
+        button { background: #28a745; color: white; border: none; padding: 12px 24px; border-radius: 6px; cursor: pointer; font-size: 16px; width: 100%; transition: background 0.3s; }
+        button:hover { background: #218838; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        
+        #progress-container { margin-top: 20px; display: none; }
+        progress { width: 100%; height: 20px; border-radius: 10px; }
+        #status { margin-top: 10px; font-weight: bold; text-align: center; }
+        .log-box { background: #333; color: #0f0; padding: 10px; border-radius: 5px; margin-top: 20px; height: 150px; overflow-y: scroll; font-family: monospace; font-size: 12px; }
+        
+        /* Result Preview */
+        #result-area { margin-top: 20px; text-align: center; display: none; }
+        img { max-width: 100%; border-radius: 8px; margin-top: 10px; border: 1px solid #ddd; }
+        .link { display: block; margin-top: 5px; color: #007bff; text-decoration: none; }
+    </style>
+</head>
+<body>
+
+<div class="card">
+    <h2>🚀 GoodMood Large File Uploader</h2>
+    <p>Test your chunked upload API logic.</p>
+
+    <div class="form-group">
+        <label for="fileInput">Select Video or Audio File:</label>
+        <input type="file" id="fileInput">
+    </div>
+
+    <button id="uploadBtn" onclick="uploadFile()">Upload File</button>
+
+    <div id="progress-container">
+        <label>Uploading Progress:</label>
+        <progress id="progressBar" value="0" max="100"></progress>
+        <div id="status">Waiting to start...</div>
+    </div>
+
+    <div id="result-area">
+        <h3>✅ Upload Complete!</h3>
+        <p><strong>Video URL:</strong> <a id="videoLink" class="link" href="#" target="_blank">View Video</a></p>
+        <p><strong>Thumbnail Generated:</strong></p>
+        <img id="thumbPreview" src="" alt="Thumbnail Preview">
+    </div>
+
+    <div class="log-box" id="debugLog">System Ready...</div>
+</div>
+
+<script>
+    // === CONFIGURATION ===
+    const API_URL = "http://localhost:8085/api/goodmood/equalizer/upload";
+    const CHUNK_SIZE = 1 * 1024 * 1024; // 1MB per chunk
+
+    // Helper: Log to the black box
+    function log(msg) {
+        const box = document.getElementById("debugLog");
+        box.innerHTML += `<div>> ${msg}</div>`;
+        box.scrollTop = box.scrollHeight;
+        console.log(msg);
+    }
+
+    // Helper: Generate UUID for fileKey
+    function generateUUID() {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+            return v.toString(16);
+        });
+    }
+
+    async function uploadFile() {
+        const fileInput = document.getElementById("fileInput");
+        const file = fileInput.files[0];
+
+        if (!file) {
+            alert("Please select a file first!");
+            return;
+        }
+
+        // Reset UI
+        document.getElementById("uploadBtn").disabled = true;
+        document.getElementById("progress-container").style.display = "block";
+        document.getElementById("result-area").style.display = "none";
+        document.getElementById("debugLog").innerHTML = "System Ready...";
+        
+        const totalChunks = Math.ceil(file.size / CHUNK_SIZE);
+        const fileKey = generateUUID(); // Unique ID for this upload session
+        
+        log(`Starting upload: ${file.name}`);
+        log(`Size: ${(file.size / 1024 / 1024).toFixed(2)} MB`);
+        log(`Total Chunks: ${totalChunks}`);
+        log(`Generated Key: ${fileKey}`);
+
+        // === CHUNK LOOP ===
+        for (let chunkIndex = 0; chunkIndex < totalChunks; chunkIndex++) {
+            const start = chunkIndex * CHUNK_SIZE;
+            const end = Math.min(file.size, start + CHUNK_SIZE);
+            const chunkBlob = file.slice(start, end); // <--- MAGIC HAPPENS HERE
+
+            // Prepare Form Data
+            const formData = new FormData();
+            formData.append("file", chunkBlob); // The slice
+            formData.append("chunkIndex", chunkIndex);
+            formData.append("totalChunks", totalChunks);
+            formData.append("fileKey", fileKey);
+            formData.append("originalName", file.name);
+            formData.append("id", 1);
+            try {
+                // Send Chunk
+                const response = await fetch(API_URL, {
+                    method: "POST",
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (!result.status) {
+                    throw new Error("Server returned false status: " + result.message);
+                }
+
+                // Update Progress Bar
+                const percent = Math.round(((chunkIndex + 1) / totalChunks) * 100);
+                document.getElementById("progressBar").value = percent;
+                document.getElementById("status").innerText = `Uploading Chunk ${chunkIndex + 1} of ${totalChunks} (${percent}%)`;
+                
+                log(`Chunk ${chunkIndex} sent. Status: ${result.message}`);
+
+                // Check for completion
+                if (result.type === "chunk" && result.message === "Upload complete") {
+                    log("Upload Finished! Processing result...");
+                    showResult(result);
+                }
+
+            } catch (error) {
+                log(`ERROR: ${error.message}`);
+                alert("Upload failed. Check console.");
+                document.getElementById("uploadBtn").disabled = false;
+                return; // Stop the loop on error
+            }
+        }
+
+        document.getElementById("uploadBtn").disabled = false;
+        document.getElementById("status").innerText = "Done!";
+    }
+
+    function showResult(data) {
+        const resultArea = document.getElementById("result-area");
+        const videoLink = document.getElementById("videoLink");
+        const thumbImg = document.getElementById("thumbPreview");
+
+        // Assuming your backend returns these keys (from previous step)
+        if(data.videoUrl) {
+            // Note: Add your backend base URL if the response is relative path (e.g. /uploads/...)
+            const baseUrl = "http://localhost:8085"; 
+            videoLink.href = baseUrl + data.videoUrl;
+            thumbImg.src = baseUrl + data.thumbnailUrl;
+            
+            resultArea.style.display = "block";
+            log(`Video URL: ${data.videoUrl}`);
+        }
+    }
+</script>
+
+</body>
+</html>

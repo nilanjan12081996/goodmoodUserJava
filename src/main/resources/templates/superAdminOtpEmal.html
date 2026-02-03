@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GoodMood OTP Verification</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #333; }
+        .container { max-width: 600px; margin: 0 auto; padding: 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+        .card { background: white; border-radius: 15px; padding: 40px; box-shadow: 0 20px 40px rgba(0,0,0,0.1); text-align: center; }
+        .otp-box { background: #f8f9ff; border: 3px solid #667eea; border-radius: 10px; font-size: 32px; font-weight: bold; color: #667eea; padding: 20px; margin: 20px 0; letter-spacing: 5px; font-family: monospace; }
+        .button { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 30px; border: none; border-radius: 25px; font-size: 16px; text-decoration: none; display: inline-block; margin: 20px 0; }
+        .footer { margin-top: 30px; font-size: 12px; color: #888; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <h1>🔐 Verify Your Account</h1>
+            <p>Your GoodMood verification code is:</p>
+            
+            <div class="otp-box" th:text="${otp}">123456</div>
+            
+            <p>This code <strong>expires in 5 minutes</strong>. Enter it to complete login.</p>
+            
+            <a href="#" class="button" th:href="@{${baseUrl}/verify-otp(id=${userId}, otp=${otp})}">Verify Now</a>
+            
+            <div class="footer">
+                <p>If you didn't request this, ignore this email.</p>
+                <p>© 2026 GoodMood. All rights reserved.</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>
