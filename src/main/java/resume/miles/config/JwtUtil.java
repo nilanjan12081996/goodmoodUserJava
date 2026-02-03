@@ -55,7 +55,7 @@ public class JwtUtil {
     }
 
 
-      public String generateDoctorToken(UserDto doctorDto) {
+      public String generateUserToken(UserDto doctorDto) {
         Map<String, Object> claims = new HashMap<>();
         // You can add roles or other info to claims here if needed
             claims.put("id", doctorDto.getId()); 
@@ -64,7 +64,6 @@ public class JwtUtil {
             claims.put("lastname",doctorDto.getLastName());
             claims.put("phone",doctorDto.getMobile());
             claims.put("status",doctorDto.getStatus());
-            claims.put("adminstatus",doctorDto.getAdminStatus());
             claims.put("isdeleted",doctorDto.getIsDeleted());
         return createToken(claims, doctorDto.getMobile());
     }

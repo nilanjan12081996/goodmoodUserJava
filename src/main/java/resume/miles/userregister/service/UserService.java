@@ -4,7 +4,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import resume.miles.userregister.dto.UserDto;
-import resume.miles.userregister.dto.DoctorProfileDTO;
+import resume.miles.userregister.dto.UserProfileDTO;
 import resume.miles.userregister.entity.UserEntity;
 import resume.miles.userregister.mapper.UserMapper;
 import resume.miles.userregister.repository.UserRepository;
@@ -40,30 +40,41 @@ public class UserService {
      }
 
      @Transactional
-     public String profile(DoctorProfileDTO doctorProfileDTO,Long id){
+     public String profile(UserProfileDTO doctorProfileDTO,Long id){
         UserEntity doctorEntityData = doctorRepository.findById(id).orElseThrow(()->new RuntimeException("no doctor found"));
-        if(doctorProfileDTO.getFname() != null){
-            doctorEntityData.setFirstName(doctorProfileDTO.getFname());
+        if(doctorProfileDTO.getFirstName() != null){
+            doctorEntityData.setFirstName(doctorProfileDTO.getFirstName());
         }
-        if(doctorProfileDTO.getLname() != null){
-            doctorEntityData.setLastName(doctorProfileDTO.getLname());
+        if(doctorProfileDTO.getLastName() != null){
+            doctorEntityData.setLastName(doctorProfileDTO.getLastName());
         }
+        if(doctorProfileDTO.getGender()!=null){
+            doctorEntityData.setGender(doctorProfileDTO.getGender());
+        }
+        // if(doctorProfileDTO.getMobile()!=null){
+        //     doctorEntityData.setMobile(doctorProfileDTO.getMobile());
+        // }
         if(doctorProfileDTO.getEmail() != null){
             doctorEntityData.setEmail(doctorProfileDTO.getEmail());
         }
-        if(doctorProfileDTO.getDob() != null){
-            doctorEntityData.setDateOfBirth(doctorProfileDTO.getDob());
+        if(doctorProfileDTO.getDate_of_birth() != null){
+            doctorEntityData.setDateOfBirth(doctorProfileDTO.getDate_of_birth());
         }
-        if(doctorProfileDTO.getGender() != null){
-            doctorEntityData.setGender(doctorProfileDTO.getGender());
-        }
+     
         return "update successfully";
      }
 
      
     //  public UserDto profileList(Long id){
     //     UserEntity doctor = doctorRepository.findOne(DoctorSpecification.byIdWithDetails(id)).orElseThrow(()-> new RuntimeException("invalid id"));
-    //     UserDto data = UserMapper.toDtoProfile(doctor);
+    //     UserDto data = UserMapper.toProfileDto(doctor);
     //     return data;
     //  }
+
+     @Transactional(readOnly = true)
+     public UserProfileDTO getProfile(Long id){
+        UserEntity entity=doctorRepository.findById(id)
+        .orElseThrow(() -> new RuntimeException("User not found"));
+        return UserMapper.toProfileDto(entity);
+     }
 }

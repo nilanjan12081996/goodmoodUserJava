@@ -26,7 +26,6 @@ public class UserDto {
     private String oAuth;
     private String oauthProvider;
     private Integer status;
-    private Integer adminStatus;
     private Integer isDeleted;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

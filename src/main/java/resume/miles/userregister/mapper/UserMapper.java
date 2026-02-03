@@ -1,9 +1,16 @@
 package resume.miles.userregister.mapper;
 
+import java.time.LocalDate;
+import java.time.Period;
+
 import resume.miles.userregister.dto.UserDto;
+import resume.miles.userregister.dto.UserProfileDTO;
 import resume.miles.userregister.entity.UserEntity;
 
 public class UserMapper {
+     private UserMapper() {
+        // prevent instantiation
+    }
 
     public static UserDto toDto(UserEntity entity) {
         if (entity == null) return null;
@@ -33,8 +40,8 @@ public class UserMapper {
         if (dto == null) return null;
 
         return UserEntity.builder()
-                .firstName("goodmooduser")
-                .lastName("user")
+                .firstName(dto.getFirstName())
+                .lastName(dto.getLastName())
                 .username(dto.getUsername())
                 .email(dto.getEmail())
                 .password(dto.getPassword())
@@ -62,4 +69,20 @@ public class UserMapper {
                 .isDeleted(0)
                 .build();
     }
+
+
+     public static UserProfileDTO toProfileDto(UserEntity entity) {
+        if (entity == null) return null;
+
+        return UserProfileDTO.builder()
+                .firstName(entity.getFirstName())
+                .lastName(entity.getLastName())
+                .gender(entity.getGender())
+                .date_of_birth(entity.getDateOfBirth())
+                .email(entity.getEmail())
+                .mobile(entity.getMobile())
+                .avatar(entity.getAvatar())
+                .build();
+    }
+    
 }

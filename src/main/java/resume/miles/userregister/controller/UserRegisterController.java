@@ -115,7 +115,7 @@ public class UserRegisterController {
             int otpint = otp.intValue();
             try{ 
                 UserDto data = otpService.checkAndVerify(id.get("id"),otpint);
-                String token = jwtUtills.generateDoctorToken(data);
+                String token = jwtUtills.generateUserToken(data);
                 return ResponseEntity.status(200).body(Map.of(
                     "message","Otp send",
                     "statusCode",200,
