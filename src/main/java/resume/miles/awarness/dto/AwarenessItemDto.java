@@ -14,4 +14,5 @@ public class AwarenessItemDto {
     private String name;
     private String image;
     private String colorCode;
+    private Integer status;
 }

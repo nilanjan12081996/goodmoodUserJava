@@ -16,6 +16,7 @@ public class SubsidebarMapper {
                 .id(subSidebar.getId())
                 .subsidebarId(subSidebar.getId())
                 .title(subSidebar.getSubsidebarName())
+                .status(subSidebar.getStatus())
                 .awarenessItemDto(subSidebar.getAwarenessList() != null? subSidebar.getAwarenessList().stream().map(AwarenessMapper::toDto).toList():Collections.emptyList())
                 .build();
     }

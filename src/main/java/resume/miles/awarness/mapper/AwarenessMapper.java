@@ -53,6 +53,7 @@ public class AwarenessMapper {
                                 .image(awarenessEntity.getImage())
                                 .name(awarenessEntity.getAwarenessName())
                                  .colorCode(awarenessEntity.getColorCode())
+                                 .status(awarenessEntity.getStatus())
                                 .build();
 
         return data;

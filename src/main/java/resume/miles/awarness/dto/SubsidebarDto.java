@@ -18,6 +18,7 @@ public class SubsidebarDto {
     private Long id;
     private Long subsidebarId;
     private String title;
+    private Integer status;
     private List<AwarenessItemDto> awarenessItemDto;
 }
 
