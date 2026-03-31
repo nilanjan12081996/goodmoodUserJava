@@ -1,5 +1,6 @@
 package resume.miles.userregister.service;
 
+import java.util.Map;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,7 +23,7 @@ public class UserService {
         this.otpService = otpService;
      }
 
-     public String register(String mobile){
+     public Map<String, Object> register(String mobile){
         
         UserEntity doctorData = doctorRepository.findByMobile(mobile)
             .orElseGet(() -> {
@@ -30,13 +31,13 @@ public class UserService {
                 return doctorRepository.save(doctorDataSave);
         });
         Long id = doctorData.getId();
-        try{
-            otpService.otpGenerate(id);
-        }catch(Exception e){
-            return e.getMessage();
-        }
+        Integer otp = otpService.otpGenerate(id);
         
-        return "Otp send";
+        return Map.of(
+            "id",id,
+            "otp",otp,
+            "message","Otp send"
+        );
      }
 
      @Transactional

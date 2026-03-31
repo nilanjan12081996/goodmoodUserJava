@@ -43,9 +43,11 @@ public class UserRegisterController {
                 ));
             }
             try{
-                String data = doctorService.register(mobile.get("mobile"));
+                Map<String, Object> data = doctorService.register(mobile.get("mobile"));
                 return ResponseEntity.status(200).body(Map.of(
-                    "message",data,
+                    "message",data.get("message"),
+                    "id",data.get("id"),
+                    "otp",data.get("otp"),
                     "statusCode",200,
                     "status",true
                 ));
@@ -71,9 +73,10 @@ public class UserRegisterController {
             }
             try{ 
                 otpService.check(id.get("id"));
-                boolean data = otpService.otpGenerate(id.get("id"));
+                Integer otp = otpService.otpGenerate(id.get("id"));
                 return ResponseEntity.status(200).body(Map.of(
                     "message","Otp send",
+                    "otp",otp,
                     "statusCode",200,
                     "status",true
                 ));

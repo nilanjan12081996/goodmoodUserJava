@@ -20,11 +20,11 @@ public class OtpService {
      }
 
      @Transactional
-     public boolean otpGenerate(Long id){
+     public Integer otpGenerate(Long id){
         Integer otp = new Random().nextInt(900000) + 100000;
         LocalDateTime time = LocalDateTime.now().plusMinutes(5);
         doctorRepository.updateOtp(id,otp,time);
-        return true;
+        return otp;
      }
      public boolean check(Long id){
          doctorRepository.findById(id).orElseThrow(()->new RuntimeException("Id not found "+id));
