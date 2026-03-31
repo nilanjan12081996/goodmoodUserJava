@@ -49,9 +49,16 @@ public class DoctorService {
     @Transactional(readOnly = true)
     public List<DoctorListDTO> getAllDoctors() {
         // Here we use HQL method to avoid N+1 queries.
-        // We could also use doctorRepository.findAll(DoctorSpecification.isActiveDoctor()) but that would lazily load the collections
         List<DoctorEntity> doctors = doctorRepository.findAllActiveDoctorsWithDetails();
         
+        // Fetch average ratings for all doctors to avoid N+1
+        List<Object[]> ratingData = doctorReviewRepository.findAllAverageRatingsGroupedByDoctor();
+        Map<Long, Double> ratingMap = ratingData.stream()
+            .collect(Collectors.toMap(
+                data -> (Long) data[0],
+                data -> (Double) data[1]
+            ));
+
         return doctors.stream().map(doctor -> {
             Integer experience = 0;
             String languages = "";
@@ -69,7 +76,8 @@ public class DoctorService {
             }
 
             String fullName = doctor.getFirstName() + " " + (doctor.getLastName() != null ? doctor.getLastName() : "");
-            
+            Double avgRating = ratingMap.getOrDefault(doctor.getId(), 0.0);
+
             return DoctorListDTO.builder()
                 .id(doctor.getId())
                 .name(fullName.trim())
@@ -77,6 +85,7 @@ public class DoctorService {
                 .experience(experience)
                 .languages(languages)
                 .specializations(specializations)
+                .rating(avgRating)
                 .build();
         }).collect(Collectors.toList());
     }
@@ -116,6 +125,10 @@ public class DoctorService {
 
         String fullName = doctor.getFirstName() + " " + (doctor.getLastName() != null ? doctor.getLastName() : "");
         
+        Integer reviewCount = doctorReviewRepository.countActiveReviewsByDoctorId(id);
+        Double avgRating = doctorReviewRepository.findAverageRatingByDoctorId(id);
+        if (avgRating == null) avgRating = 0.0;
+
         return DoctorDetailsDTO.builder()
             .id(doctor.getId())
             .name(fullName.trim())
@@ -126,8 +139,8 @@ public class DoctorService {
             .specializations(specializations)
             .education(validEducations)   // Inserted actual mapped education logic
             .price(0)                     // Placeholder, waiting for price instructions
-            .reviews(0)                   // Placeholder, waiting for reviews schema
-            .rating(0.0)                  // Placeholder, waiting for rating metrics
+            .reviews(reviewCount)
+            .rating(avgRating)
             .build();
     }
 

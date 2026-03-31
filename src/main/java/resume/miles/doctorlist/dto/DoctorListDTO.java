@@ -17,5 +17,5 @@ public class DoctorListDTO {
     private Integer experience;
     private String languages;
     private List<String> specializations;
-    // Rating and Charges are not sent for now as requested.
+    private Double rating;
 }
