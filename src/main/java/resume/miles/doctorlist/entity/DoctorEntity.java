@@ -46,4 +46,9 @@ public class DoctorEntity {
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private Set<DoctorEducationEntity> doctorEducations;
+
+    @OneToMany(mappedBy = "doctor", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private Set<DoctorSupportMapEntity> doctorSupportMaps;
 }

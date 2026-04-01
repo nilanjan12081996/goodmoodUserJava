@@ -47,9 +47,14 @@ public class DoctorService {
     }
 
     @Transactional(readOnly = true)
-    public List<DoctorListDTO> getAllDoctors() {
-        // Here we use HQL method to avoid N+1 queries.
-        List<DoctorEntity> doctors = doctorRepository.findAllActiveDoctorsWithDetails();
+    public List<DoctorListDTO> getAllDoctors(Long supportId) {
+        Specification<DoctorEntity> spec = Specification.where(resume.miles.doctorlist.repository.specification.DoctorSpecification.isActiveDoctor());
+        
+        if (supportId != null) {
+            spec = spec.and(resume.miles.doctorlist.repository.specification.DoctorSpecification.hasSupportId(supportId));
+        }
+
+        List<DoctorEntity> doctors = doctorRepository.findAll(spec);
         
         // Fetch average ratings for all doctors to avoid N+1
         List<Object[]> ratingData = doctorReviewRepository.findAllAverageRatingsGroupedByDoctor();

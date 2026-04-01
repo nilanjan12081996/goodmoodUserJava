@@ -5,6 +5,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -30,9 +31,9 @@ public class DoctorController {
     }
 
     @GetMapping("/list")
-    public ResponseEntity<?> getAllDoctors() {
+    public ResponseEntity<?> getAllDoctors(@RequestParam(required = false) Long supportId) {
         try {
-            List<DoctorListDTO> doctors = doctorService.getAllDoctors();
+            List<DoctorListDTO> doctors = doctorService.getAllDoctors(supportId);
             return ResponseEntity.status(200).body(Map.of(
                 "data", doctors,
                 "statusCode", 200,
