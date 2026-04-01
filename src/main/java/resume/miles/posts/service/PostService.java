@@ -21,4 +21,10 @@ public class PostService {
     return entity.stream().map(PostMapper::toDto).toList();
  }
 
+ public PostDto getPostBySlug(String slug){
+    return postRepository.findBySlugAndStatus(slug, 1)
+        .map(PostMapper::toDto)
+        .orElse(null);
+ }
+
 }
