@@ -17,8 +17,12 @@ import resume.miles.doctorlist.repository.DoctorRepository;
 import resume.miles.doctorlist.repository.DoctorSlotTimingRepository;
 import resume.miles.doctorlist.repository.DoctorTimeslotRepository;
 import resume.miles.doctorlist.repository.DoctorReviewRepository;
+import resume.miles.doctorlist.repository.ContractTypeRepository;
+import resume.miles.doctorlist.entity.ContractTypeEntity;
+import resume.miles.doctorlist.dto.DoctorPackageDTO;
 import resume.miles.doctorlist.repository.specification.DoctorReviewSpecification;
 import org.springframework.data.jpa.domain.Specification;
+import java.util.Optional;
 
 import java.time.LocalTime;
 import java.time.LocalDateTime;
@@ -36,15 +40,18 @@ public class DoctorService {
     private final DoctorTimeslotRepository doctorTimeslotRepository;
     private final DoctorSlotTimingRepository doctorSlotTimingRepository;
     private final DoctorReviewRepository doctorReviewRepository;
+    private final ContractTypeRepository contractTypeRepository;
 
     public DoctorService(DoctorRepository doctorRepository, 
                          DoctorTimeslotRepository doctorTimeslotRepository,
                          DoctorSlotTimingRepository doctorSlotTimingRepository,
-                         DoctorReviewRepository doctorReviewRepository) {
+                         DoctorReviewRepository doctorReviewRepository,
+                         ContractTypeRepository contractTypeRepository) {
         this.doctorRepository = doctorRepository;
         this.doctorTimeslotRepository = doctorTimeslotRepository;
         this.doctorSlotTimingRepository = doctorSlotTimingRepository;
         this.doctorReviewRepository = doctorReviewRepository;
+        this.contractTypeRepository = contractTypeRepository;
     }
 
     @Transactional(readOnly = true)
@@ -307,6 +314,91 @@ public class DoctorService {
             .rating(saved.getRating())
             .text(saved.getReviewText())
             .date(formattedDate)
+            .build();
+    }
+
+    @Transactional(readOnly = true)
+    public DoctorPackageDTO getDoctorPackages(Long doctorId, Long supportId) {
+        DoctorEntity doctor = doctorRepository.findActiveDoctorByIdWithDetails(doctorId);
+        if (doctor == null) {
+            throw new RuntimeException("Doctor not found with ID: " + doctorId);
+        }
+
+        // 1. Durations from doctor_slot_timings (status = 1)
+        List<DoctorSlotTimingEntity> timings = doctorSlotTimingRepository.findAll();
+        List<DoctorPackageDTO.DurationDTO> durations = timings.stream()
+            .filter(t -> t.getStatus() != null && t.getStatus() == 1)
+            .map(t -> DoctorPackageDTO.DurationDTO.builder()
+                .id(t.getId())
+                .minutes(t.getSlotTime())
+                .formattedLabel(t.getSlotTime() + " minutes")
+                .build())
+            .collect(Collectors.toList());
+
+        // 2. Contracts from contract_type (Video/Audio)
+        List<ContractTypeEntity> contractTypes = contractTypeRepository.findByStatus(1);
+
+        // 3. Determine the base duration for pricePerMin (prioritize timings table as per request)
+        int baseDuration = 60;
+        if (!durations.isEmpty()) {
+            baseDuration = durations.get(0).getMinutes();
+        }
+
+        // 4. Prices and standard duration from doctor_services
+        DoctorServiceEntity activeService = null;
+        if (doctor.getDoctorServices() != null && !doctor.getDoctorServices().isEmpty()) {
+            if (supportId != null) {
+                activeService = doctor.getDoctorServices().stream()
+                    .filter(ds -> supportId.equals(ds.getSupportCategoryId()))
+                    .findFirst().orElse(null);
+            }
+            
+            // Fallback to first available if no match found for specific supportId
+            if (activeService == null) {
+                activeService = doctor.getDoctorServices().iterator().next();
+            }
+        }
+
+        final DoctorServiceEntity serviceRef = activeService;
+        final int finalBaseDuration = baseDuration;
+        
+        List<DoctorPackageDTO.PackageDTO> packages = contractTypes.stream().map(ct -> {
+            Double basePrice = 0.0;
+            Double perMinPrice = 0.0;
+            int standardDuration = finalBaseDuration;
+            String description = ct.getName() + " call with Therapist";
+
+            if (serviceRef != null) {
+                // If doctor has a specific duration, use it, otherwise use the one from timings table
+                if (serviceRef.getDuration() != null && serviceRef.getDuration() > 0) {
+                    standardDuration = serviceRef.getDuration();
+                }
+                
+                if ("Video".equalsIgnoreCase(ct.getName())) {
+                    basePrice = (serviceRef.getVideoCallPrice() != null) ? serviceRef.getVideoCallPrice() : 0.0;
+                } else if ("Audio".equalsIgnoreCase(ct.getName()) || "Voice".equalsIgnoreCase(ct.getName())) {
+                    basePrice = (serviceRef.getVoiceCallPrice() != null) ? serviceRef.getVoiceCallPrice() : 0.0;
+                }
+                
+                if (basePrice > 0) {
+                    perMinPrice = basePrice / standardDuration;
+                }
+            }
+
+            return DoctorPackageDTO.PackageDTO.builder()
+                .typeId(ct.getId())
+                .typeName(ct.getName() + " Call")
+                .description(description)
+                .basePrice(basePrice)
+                .pricePerMin(perMinPrice)
+                .standardDuration(standardDuration)
+                .build();
+        }).collect(Collectors.toList());
+
+        return DoctorPackageDTO.builder()
+            .doctorId(doctorId)
+            .durations(durations)
+            .packages(packages)
             .build();
     }
 }

@@ -13,6 +13,7 @@ import resume.miles.doctorlist.dto.AddDoctorReviewDTO;
 import resume.miles.doctorlist.dto.DoctorAvailabilityDTO;
 import resume.miles.doctorlist.dto.DoctorDetailsDTO;
 import resume.miles.doctorlist.dto.DoctorListDTO;
+import resume.miles.doctorlist.dto.DoctorPackageDTO;
 import resume.miles.doctorlist.dto.DoctorReviewDTO;
 import resume.miles.doctorlist.service.DoctorService;
 import resume.miles.config.JwtUserDetails;
@@ -130,6 +131,32 @@ public class DoctorController {
                 "data", savedReview,
                 "statusCode", 201,
                 "status", true
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(400).body(Map.of(
+                "message", e.getMessage(),
+                "statusCode", 400,
+                "status", false
+            ));
+        }
+    }
+
+    @GetMapping("/packages/{id}")
+    public ResponseEntity<?> getDoctorPackages(
+            @PathVariable Long id,
+            @RequestParam(required = false) Long supportId) {
+        try {
+            DoctorPackageDTO packages = doctorService.getDoctorPackages(id, supportId);
+            return ResponseEntity.status(200).body(Map.of(
+                "data", packages,
+                "statusCode", 200,
+                "status", true
+            ));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(404).body(Map.of(
+                "message", e.getMessage(),
+                "statusCode", 404,
+                "status", false
             ));
         } catch (Exception e) {
             return ResponseEntity.status(400).body(Map.of(
