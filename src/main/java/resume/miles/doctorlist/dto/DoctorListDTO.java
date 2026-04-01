@@ -18,4 +18,6 @@ public class DoctorListDTO {
     private String languages;
     private List<String> specializations;
     private Double rating;
+    private Double videoCallPrice;
+    private Double voiceCallPrice;
 }

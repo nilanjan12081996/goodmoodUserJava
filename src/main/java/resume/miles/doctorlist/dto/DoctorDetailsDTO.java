@@ -22,7 +22,8 @@ public class DoctorDetailsDTO {
     // Note: The following fields are included to match the requested UI layout 
     // but default/placeholder values will be returned until these tables are created.
     private List<String> education; 
-    private Integer price;          // "starts @ ₹1000"
+    private Double videoCallPrice;
+    private Double voiceCallPrice;
     private Integer reviews;        // "99 Reviews"
     private Double rating;          // "4.7 Rating"
 }

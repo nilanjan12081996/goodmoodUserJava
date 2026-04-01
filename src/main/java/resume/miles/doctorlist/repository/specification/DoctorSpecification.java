@@ -12,6 +12,7 @@ public class DoctorSpecification {
                 jakarta.persistence.criteria.Fetch<DoctorEntity, resume.miles.doctorlist.entity.DoctorSpecializationEntity> dsFetch = root.fetch("doctorSpecializations", jakarta.persistence.criteria.JoinType.LEFT);
                 dsFetch.fetch("specialization", jakarta.persistence.criteria.JoinType.LEFT);
                 root.fetch("doctorEducations", jakarta.persistence.criteria.JoinType.LEFT);
+                root.fetch("doctorServices", jakarta.persistence.criteria.JoinType.LEFT);
             }
             return cb.equal(root.get("status"), 1);
         };

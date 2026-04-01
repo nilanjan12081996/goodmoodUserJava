@@ -12,6 +12,7 @@ import resume.miles.doctorlist.entity.DoctorTimeslotEntity;
 import resume.miles.doctorlist.entity.DoctorSlotTimingEntity;
 import resume.miles.doctorlist.entity.DoctorTimeslotEntity;
 import resume.miles.doctorlist.entity.DoctorReviewEntity;
+import resume.miles.doctorlist.entity.DoctorServiceEntity;
 import resume.miles.doctorlist.repository.DoctorRepository;
 import resume.miles.doctorlist.repository.DoctorSlotTimingRepository;
 import resume.miles.doctorlist.repository.DoctorTimeslotRepository;
@@ -83,6 +84,30 @@ public class DoctorService {
             String fullName = doctor.getFirstName() + " " + (doctor.getLastName() != null ? doctor.getLastName() : "");
             Double avgRating = ratingMap.getOrDefault(doctor.getId(), 0.0);
 
+            // Price Extraction logic (new)
+            Double videoPrice = 0.0;
+            Double voicePrice = 0.0;
+            
+            if (doctor.getDoctorServices() != null && !doctor.getDoctorServices().isEmpty()) {
+                // Try choosing service matching supportId
+                DoctorServiceEntity selectedService = null;
+                if (supportId != null) {
+                    selectedService = doctor.getDoctorServices().stream()
+                        .filter(ds -> supportId.equals(ds.getSupportCategoryId()))
+                        .findFirst().orElse(null);
+                }
+                
+                // Fallback to first available service if no match
+                if (selectedService == null) {
+                    selectedService = doctor.getDoctorServices().iterator().next();
+                }
+
+                if (selectedService != null) {
+                    videoPrice = selectedService.getVideoCallPrice();
+                    voicePrice = selectedService.getVoiceCallPrice();
+                }
+            }
+
             return DoctorListDTO.builder()
                 .id(doctor.getId())
                 .name(fullName.trim())
@@ -91,6 +116,8 @@ public class DoctorService {
                 .languages(languages)
                 .specializations(specializations)
                 .rating(avgRating)
+                .videoCallPrice(videoPrice)
+                .voiceCallPrice(voicePrice)
                 .build();
         }).collect(Collectors.toList());
     }
@@ -134,6 +161,14 @@ public class DoctorService {
         Double avgRating = doctorReviewRepository.findAverageRatingByDoctorId(id);
         if (avgRating == null) avgRating = 0.0;
 
+        Double videoPrice = 0.0;
+        Double voicePrice = 0.0;
+        if (doctor.getDoctorServices() != null && !doctor.getDoctorServices().isEmpty()) {
+            DoctorServiceEntity service = doctor.getDoctorServices().iterator().next();
+            videoPrice = service.getVideoCallPrice();
+            voicePrice = service.getVoiceCallPrice();
+        }
+
         return DoctorDetailsDTO.builder()
             .id(doctor.getId())
             .name(fullName.trim())
@@ -143,7 +178,8 @@ public class DoctorService {
             .about(about)
             .specializations(specializations)
             .education(validEducations)   // Inserted actual mapped education logic
-            .price(0)                     // Placeholder, waiting for price instructions
+            .videoCallPrice(videoPrice)
+            .voiceCallPrice(voicePrice)
             .reviews(reviewCount)
             .rating(avgRating)
             .build();
