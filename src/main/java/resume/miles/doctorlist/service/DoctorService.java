@@ -26,6 +26,12 @@ import resume.miles.doctorlist.repository.specification.DoctorReviewSpecificatio
 import org.springframework.data.jpa.domain.Specification;
 import resume.miles.doctorlist.repository.AppointmentPatientRepository;
 import resume.miles.doctorlist.entity.AppointmentPatientEntity;
+import resume.miles.doctorlist.dto.UserAppointmentDTO;
+import resume.miles.doctorlist.dto.AppointmentDetailsDTO;
+import resume.miles.userregister.repository.UserRepository;
+import resume.miles.userregister.entity.UserEntity;
+import resume.miles.supportcategory.repository.SupportCategoryRepository;
+import resume.miles.supportcategory.entity.SupportCategoryEntity;
 
 import java.time.LocalTime;
 import java.time.LocalDate;
@@ -45,6 +51,8 @@ public class DoctorService {
     private final ContractTypeRepository contractTypeRepository;
     private final DoctorAppointmentRepository doctorAppointmentRepository;
     private final AppointmentPatientRepository appointmentPatientRepository;
+    private final UserRepository userRepository;
+    private final SupportCategoryRepository supportCategoryRepository;
 
     public DoctorService(DoctorRepository doctorRepository, 
                          DoctorTimeslotRepository doctorTimeslotRepository,
@@ -52,7 +60,9 @@ public class DoctorService {
                          DoctorReviewRepository doctorReviewRepository,
                          ContractTypeRepository contractTypeRepository,
                          DoctorAppointmentRepository doctorAppointmentRepository,
-                         AppointmentPatientRepository appointmentPatientRepository) {
+                         AppointmentPatientRepository appointmentPatientRepository,
+                         UserRepository userRepository,
+                         SupportCategoryRepository supportCategoryRepository) {
         this.doctorRepository = doctorRepository;
         this.doctorTimeslotRepository = doctorTimeslotRepository;
         this.doctorSlotTimingRepository = doctorSlotTimingRepository;
@@ -60,6 +70,8 @@ public class DoctorService {
         this.contractTypeRepository = contractTypeRepository;
         this.doctorAppointmentRepository = doctorAppointmentRepository;
         this.appointmentPatientRepository = appointmentPatientRepository;
+        this.userRepository = userRepository;
+        this.supportCategoryRepository = supportCategoryRepository;
     }
 
     @Transactional(readOnly = true)
@@ -263,6 +275,28 @@ public class DoctorService {
         LocalTime startTime = dto.getTimeonly();
         LocalTime endTime = parseEndTimeFromSlot(dto.getTimeSlot(), startTime.plusMinutes(slotDuration));
 
+        // Validate that the requested slot is actually within the doctor's active schedule
+        String dayName = dto.getDate().getDayOfWeek().getDisplayName(TextStyle.FULL, Locale.ENGLISH);
+        List<DoctorTimeslotEntity> schedule = doctorTimeslotRepository.findActiveTimeslotsByDoctorIdAndDayName(dto.getDoctorId(), dayName);
+        
+        boolean isValidSlot = false;
+        final int finalSlotDuration = slotDuration;
+        for (DoctorTimeslotEntity slot : schedule) {
+            LocalTime current = slot.getStartTime();
+            while (!current.plusMinutes(finalSlotDuration).isAfter(slot.getEndTime())) {
+                if (current.equals(startTime)) {
+                    isValidSlot = true;
+                    break;
+                }
+                current = current.plusMinutes(finalSlotDuration);
+            }
+            if (isValidSlot) break;
+        }
+
+        if (!isValidSlot) {
+            return getAvailabilityResponse(dto, "This doctor is not available at the requested time.");
+        }
+
         // Check for doctor overlap
         List<DoctorAppointmentEntity> doctorBooked = doctorAppointmentRepository.findByDoctorIdAndDateAndStatus(dto.getDoctorId(), dto.getDate(), 1L);
         for (DoctorAppointmentEntity appt : doctorBooked) {
@@ -310,6 +344,139 @@ public class DoctorService {
         response.put("success", true);
         response.put("message", "Appointment booked successfully");
         return response;
+    }
+
+    @Transactional(readOnly = true)
+    public List<UserAppointmentDTO> getUserAppointments(Long userId, boolean upcoming) {
+        LocalDate today = LocalDate.now();
+        List<DoctorAppointmentEntity> appointments;
+        
+        if (upcoming) {
+            // Upcoming: Date is today or later AND not complete
+            appointments = doctorAppointmentRepository.findByUserIdAndDateGreaterThanEqualAndIsCompleteAndStatusOrderByDateAscTimeonlyAsc(userId, today, 0, 1L);
+        } else {
+            // Completed: Either explicitly marked as complete OR the date is in the past
+            // Use a Set to handle potential duplicates between marked complete and past date
+            Set<DoctorAppointmentEntity> completeSet = new LinkedHashSet<>();
+            completeSet.addAll(doctorAppointmentRepository.findByUserIdAndIsCompleteAndStatusOrderByDateDescTimeonlyDesc(userId, 1, 1L));
+            completeSet.addAll(doctorAppointmentRepository.findByUserIdAndDateLessThanAndIsCompleteAndStatusOrderByDateDescTimeonlyDesc(userId, today, 0, 1L));
+            
+            appointments = new ArrayList<>(completeSet);
+            // Sort merged list (descending date and time)
+            appointments.sort((a1, a2) -> {
+                int dateComp = a2.getDate().compareTo(a1.getDate());
+                if (dateComp != 0) return dateComp;
+                return a2.getTimeonly().compareTo(a1.getTimeonly());
+            });
+        }
+
+        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("EEEE, d MMMM", Locale.ENGLISH);
+
+        return appointments.stream().map(appt -> {
+            DoctorEntity doctor = doctorRepository.findById(appt.getDoctorId()).orElse(null);
+            String docName = doctor != null ? doctor.getFirstName() + " " + doctor.getLastName() : "Unknown Doctor";
+            String docAvatar = doctor != null ? doctor.getAvatar() : null;
+            String spec = (doctor != null && doctor.getDoctorSpecializations() != null && !doctor.getDoctorSpecializations().isEmpty()) 
+                ? doctor.getDoctorSpecializations().iterator().next().getSpecialization().getName() 
+                : "Therapist";
+
+            return UserAppointmentDTO.builder()
+                .id(appt.getId())
+                .doctorId(appt.getDoctorId())
+                .doctorName(docName)
+                .doctorAvatar(docAvatar)
+                .specialization(spec)
+                .date(appt.getDate().format(dateFormatter))
+                .timeSlot(appt.getTimeSlot())
+                .callType(appt.getCalltype())
+                .build();
+        }).collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
+    public AppointmentDetailsDTO getAppointmentDetails(Long appointmentId) {
+        DoctorAppointmentEntity appt = doctorAppointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new RuntimeException("Appointment not found"));
+        
+        DoctorEntity doctor = doctorRepository.findActiveDoctorByIdWithDetails(appt.getDoctorId());
+        if (doctor == null) throw new RuntimeException("Doctor not found");
+        
+        AppointmentPatientEntity patientInfo = appointmentPatientRepository.findByAppointmentId(appointmentId)
+                .orElse(new AppointmentPatientEntity());
+        
+        UserEntity user = userRepository.findById(appt.getUserId())
+                .orElseThrow(() -> new RuntimeException("User not found"));
+                
+        String patientFullName = "";
+        if ("Self".equalsIgnoreCase(patientInfo.getBookingFor())) {
+            patientFullName = (user.getFirstName() != null ? user.getFirstName() : "") + " " + (user.getLastName() != null ? user.getLastName() : "");
+        } else {
+            // For now, if someone else, use the user's name as we don't have a patient name field yet.
+            patientFullName = (user.getFirstName() != null ? user.getFirstName() : "") + " " + (user.getLastName() != null ? user.getLastName() : "");
+        }
+
+        // Format Date: March 23, 2025
+        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("MMMM d, yyyy", Locale.ENGLISH);
+        String formattedDate = (appt.getDate() != null) ? appt.getDate().format(dateFormatter) : "";
+        
+        // Format Time: 10:00 - 10:50 (50 minutes)
+        int duration = 60;
+        List<DoctorSlotTimingEntity> timings = doctorSlotTimingRepository.findAll();
+        if (!timings.isEmpty() && timings.get(0).getSlotTime() != null) {
+            duration = timings.get(0).getSlotTime();
+        }
+        
+        LocalTime startTime = appt.getTimeonly();
+        LocalTime endTime = parseEndTimeFromSlot(appt.getTimeSlot(), startTime.plusMinutes(duration));
+        
+        DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
+        String formattedTime = startTime.format(timeFormatter) + " - " + endTime.format(timeFormatter) + " (" + duration + " minutes)";
+        
+        // Doctor details
+        String specialization = doctor.getDoctorSpecializations().stream()
+                .findFirst()
+                .map(s -> s.getSpecialization().getName())
+                .orElse("Therapist");
+                
+        Integer exp = (doctor.getDoctorAbout() != null) ? doctor.getDoctorAbout().getExp() : 0;
+        
+        // Package Info
+        DoctorServiceEntity service = doctor.getDoctorServices().stream().findFirst().orElse(null);
+        String callCategory = "Consultation";
+        Double price = 0.0;
+        if (service != null) {
+            SupportCategoryEntity cat = supportCategoryRepository.findById(service.getSupportCategoryId()).orElse(null);
+            if (cat != null) callCategory = cat.getName();
+            price = (appt.getCalltype() != null && appt.getCalltype() == 1) ? service.getVideoCallPrice() : service.getVoiceCallPrice();
+        }
+
+        return AppointmentDetailsDTO.builder()
+                .doctorId(doctor.getId())
+                .doctorName(doctor.getFirstName() + " " + doctor.getLastName())
+                .doctorAvatar(doctor.getAvatar())
+                .doctorSpecialization(specialization)
+                .doctorExperience(exp)
+                .appointmentId(appt.getId())
+                .date(formattedDate)
+                .timeSlot(formattedTime)
+                .bookingFor(patientInfo.getBookingFor())
+                .patientFullName(patientFullName.trim())
+                .patientGender(patientInfo.getGender())
+                .patientAge(patientInfo.getAge() != null ? patientInfo.getAge() + " Years" : "")
+                .patientProblem(patientInfo.getProblem())
+                .callType(appt.getCalltype() != null && appt.getCalltype() == 1 ? "Video Call" : "Voice Call")
+                .callCategory(callCategory)
+                .price(price)
+                .paymentStatus(appt.getStatus() == 1 ? "Paid" : "Unpaid")
+                .build();
+    }
+
+    @Transactional
+    public void completeAppointment(Long appointmentId) {
+        DoctorAppointmentEntity appointment = doctorAppointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new RuntimeException("Appointment not found with ID: " + appointmentId));
+        appointment.setIsComplete(1);
+        doctorAppointmentRepository.save(appointment);
     }
 
     private Map<String, Object> getAvailabilityResponse(BookAppointmentDTO dto, String message) {

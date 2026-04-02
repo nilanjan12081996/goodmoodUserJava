@@ -50,4 +50,8 @@ public class DoctorAppointmentEntity {
 
     @Column(name = "updated_at", insertable = false, updatable = false)
     private LocalDateTime updatedAt;
+
+    @Column(name = "is_complete")
+    @Builder.Default
+    private Integer isComplete = 0;
 }

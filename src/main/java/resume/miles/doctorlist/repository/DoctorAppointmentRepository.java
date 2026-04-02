@@ -13,4 +13,7 @@ public interface DoctorAppointmentRepository extends JpaRepository<DoctorAppoint
     boolean existsByUserIdAndDateAndTimeonlyAndStatus(Long userId, LocalDate date, LocalTime timeonly, Long status);
     List<DoctorAppointmentEntity> findByDoctorIdAndDateAndStatus(Long doctorId, LocalDate date, Long status);
     List<DoctorAppointmentEntity> findByUserIdAndDateAndStatus(Long userId, LocalDate date, Long status);
+    List<DoctorAppointmentEntity> findByUserIdAndDateGreaterThanEqualAndIsCompleteAndStatusOrderByDateAscTimeonlyAsc(Long userId, LocalDate date, Integer isComplete, Long status);
+    List<DoctorAppointmentEntity> findByUserIdAndIsCompleteAndStatusOrderByDateDescTimeonlyDesc(Long userId, Integer isComplete, Long status);
+    List<DoctorAppointmentEntity> findByUserIdAndDateLessThanAndIsCompleteAndStatusOrderByDateDescTimeonlyDesc(Long userId, LocalDate date, Integer isComplete, Long status);
 }

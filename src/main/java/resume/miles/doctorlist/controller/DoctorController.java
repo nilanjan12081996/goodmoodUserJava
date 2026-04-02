@@ -4,6 +4,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -16,6 +17,8 @@ import resume.miles.doctorlist.dto.DoctorListDTO;
 import resume.miles.doctorlist.dto.DoctorPackageDTO;
 import resume.miles.doctorlist.dto.BookAppointmentDTO;
 import resume.miles.doctorlist.dto.DoctorReviewDTO;
+import resume.miles.doctorlist.dto.UserAppointmentDTO;
+import resume.miles.doctorlist.dto.AppointmentDetailsDTO;
 import resume.miles.doctorlist.service.DoctorService;
 import resume.miles.config.JwtUserDetails;
 
@@ -39,6 +42,42 @@ public class DoctorController {
             List<DoctorListDTO> doctors = doctorService.getAllDoctors(supportId);
             return ResponseEntity.status(200).body(Map.of(
                 "data", doctors,
+                "statusCode", 200,
+                "status", true
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(400).body(Map.of(
+                "message", e.getMessage(),
+                "statusCode", 400,
+                "status", false
+            ));
+        }
+    }
+
+    @GetMapping("/appointments/upcoming")
+    public ResponseEntity<?> getUpcomingAppointments(@AuthenticationPrincipal JwtUserDetails userDetails) {
+        try {
+            List<UserAppointmentDTO> appointments = doctorService.getUserAppointments(userDetails.getId(), true);
+            return ResponseEntity.ok(Map.of(
+                "data", appointments,
+                "statusCode", 200,
+                "status", true
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(400).body(Map.of(
+                "message", e.getMessage(),
+                "statusCode", 400,
+                "status", false
+            ));
+        }
+    }
+
+    @GetMapping("/appointments/completed")
+    public ResponseEntity<?> getCompletedAppointments(@AuthenticationPrincipal JwtUserDetails userDetails) {
+        try {
+            List<UserAppointmentDTO> appointments = doctorService.getUserAppointments(userDetails.getId(), false);
+            return ResponseEntity.ok(Map.of(
+                "data", appointments,
                 "statusCode", 200,
                 "status", true
             ));
@@ -184,6 +223,42 @@ public class DoctorController {
             errorResponse.put("statusCode", 400);
             errorResponse.put("status", false);
             return ResponseEntity.status(400).body(errorResponse);
+        }
+    }
+
+    @GetMapping("/appointments/{id}")
+    public ResponseEntity<?> getAppointmentDetails(@PathVariable Long id) {
+        try {
+            AppointmentDetailsDTO details = doctorService.getAppointmentDetails(id);
+            return ResponseEntity.status(200).body(Map.of(
+                "data", details,
+                "statusCode", 200,
+                "status", true
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(400).body(Map.of(
+                "message", e.getMessage(),
+                "statusCode", 400,
+                "status", false
+            ));
+        }
+    }
+
+    @PatchMapping("/appointments/{id}/complete")
+    public ResponseEntity<?> completeAppointment(@PathVariable Long id) {
+        try {
+            doctorService.completeAppointment(id);
+            return ResponseEntity.ok(Map.of(
+                "message", "Appointment marked as complete",
+                "statusCode", 200,
+                "status", true
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(400).body(Map.of(
+                "message", e.getMessage(),
+                "statusCode", 400,
+                "status", false
+            ));
         }
     }
 }
