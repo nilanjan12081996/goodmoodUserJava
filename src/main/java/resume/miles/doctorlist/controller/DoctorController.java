@@ -14,12 +14,14 @@ import resume.miles.doctorlist.dto.DoctorAvailabilityDTO;
 import resume.miles.doctorlist.dto.DoctorDetailsDTO;
 import resume.miles.doctorlist.dto.DoctorListDTO;
 import resume.miles.doctorlist.dto.DoctorPackageDTO;
+import resume.miles.doctorlist.dto.BookAppointmentDTO;
 import resume.miles.doctorlist.dto.DoctorReviewDTO;
 import resume.miles.doctorlist.service.DoctorService;
 import resume.miles.config.JwtUserDetails;
 
 import java.util.List;
 import java.util.Map;
+import java.util.LinkedHashMap;
 
 @RestController
 @RequestMapping("/api/doctors")
@@ -117,18 +119,9 @@ public class DoctorController {
             // Set the userId from the authenticated token principal
             dto.setUserId(userDetails.getId());
             
-            String fullName = (userDetails.getFirstname() != null ? userDetails.getFirstname() : "").trim();
-            if (userDetails.getLastname() != null) {
-                fullName += " " + userDetails.getLastname();
-            }
-            if (fullName.isEmpty()) {
-                fullName = userDetails.getUsername();
-            }
-
-            DoctorReviewDTO savedReview = doctorService.addDoctorReview(dto, fullName.trim());
+            doctorService.addDoctorReview(dto, userDetails.getId());
             return ResponseEntity.status(201).body(Map.of(
                 "message", "Review added successfully",
-                "data", savedReview,
                 "statusCode", 201,
                 "status", true
             ));
@@ -164,6 +157,33 @@ public class DoctorController {
                 "statusCode", 400,
                 "status", false
             ));
+        }
+    }
+
+    @PostMapping("/book")
+    public ResponseEntity<?> bookAppointment(
+            @RequestBody BookAppointmentDTO dto,
+            @AuthenticationPrincipal JwtUserDetails userDetails) {
+        try {
+            dto.setUserId(userDetails.getId());
+            Map<String, Object> result = doctorService.bookAppointment(dto);
+            
+            boolean success = (boolean) result.get("success");
+            int statusCode = success ? 201 : 400;
+
+            Map<String, Object> response = new LinkedHashMap<>();
+            response.put("message", result.get("message"));
+            response.put("data", result.get("data"));
+            response.put("statusCode", statusCode);
+            response.put("status", success);
+
+            return ResponseEntity.status(statusCode).body(response);
+        } catch (Exception e) {
+            Map<String, Object> errorResponse = new LinkedHashMap<>();
+            errorResponse.put("message", e.getMessage() != null ? e.getMessage() : "An unexpected error occurred");
+            errorResponse.put("statusCode", 400);
+            errorResponse.put("status", false);
+            return ResponseEntity.status(400).body(errorResponse);
         }
     }
 }
