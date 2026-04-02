@@ -25,5 +25,6 @@ public class DoctorAvailabilityDTO {
     public static class TimeSlotDTO {
         private String time;
         private String period; // e.g. "Morning", "Afternoon", "Evening", "Night"
+        private String timeSlot; // e.g. "10:30 AM - 11:15 AM"
     }
 }

@@ -94,6 +94,8 @@ public class DoctorService {
             slotDurationMinutes = timings.get(0).getSlotTime();
         }
 
+        Map<Long, Set<LocalTime>> dayAddedTimes = new HashMap<>(); // To deduplicate slots for each day
+
         for (DoctorTimeslotEntity slot : timeslots) {
             Long dayId = slot.getDay().getId();
             DoctorAvailabilityDTO dto = availabilityMap.computeIfAbsent(dayId, k -> 
@@ -105,14 +107,21 @@ public class DoctorService {
                     .build()
             );
 
+            Set<LocalTime> addedTimes = dayAddedTimes.computeIfAbsent(dayId, k -> new HashSet<>());
+
             LocalTime current = slot.getStartTime();
             LocalTime end = slot.getEndTime();
 
             while (current.plusMinutes(slotDurationMinutes).compareTo(end) <= 0) {
-                dto.getSlots().add(DoctorAvailabilityDTO.TimeSlotDTO.builder()
-                        .time(current.format(timeFormatter).toLowerCase())
-                        .period(getPeriodOfDay(current))
-                        .build());
+                if (!addedTimes.contains(current)) {
+                    LocalTime slotEnd = current.plusMinutes(slotDurationMinutes);
+                    dto.getSlots().add(DoctorAvailabilityDTO.TimeSlotDTO.builder()
+                            .time(current.format(timeFormatter).toLowerCase())
+                            .period(getPeriodOfDay(current))
+                            .timeSlot(current.format(timeFormatter).toUpperCase() + " - " + slotEnd.format(timeFormatter).toUpperCase())
+                            .build());
+                    addedTimes.add(current);
+                }
                 current = current.plusMinutes(slotDurationMinutes);
             }
         }
@@ -126,6 +135,17 @@ public class DoctorService {
         if (hour >= 12 && hour < 17) return "Afternoon";
         if (hour >= 17 && hour < 21) return "Evening";
         return "Night";
+    }
+
+    private LocalTime parseEndTimeFromSlot(String timeSlot, LocalTime defaultEndTime) {
+        try {
+            if (timeSlot == null || !timeSlot.contains("-")) return defaultEndTime;
+            String endPart = timeSlot.split("-")[1].trim().toUpperCase();
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("h:mm a", Locale.ENGLISH);
+            return LocalTime.parse(endPart, formatter);
+        } catch (Exception e) {
+            return defaultEndTime;
+        }
     }
 
     @Transactional
@@ -229,12 +249,33 @@ public class DoctorService {
 
     @Transactional
     public Map<String, Object> bookAppointment(BookAppointmentDTO dto) {
-        if (doctorAppointmentRepository.existsByDoctorIdAndDateAndTimeonlyAndStatus(dto.getDoctorId(), dto.getDate(), dto.getTimeonly(), 1L)) {
-            return getAvailabilityResponse(dto, "The doctor is already booked for this slot.");
+        int slotDuration = 60;
+        List<DoctorSlotTimingEntity> timings = doctorSlotTimingRepository.findAll();
+        if (!timings.isEmpty() && timings.get(0).getSlotTime() != null) {
+            slotDuration = timings.get(0).getSlotTime();
         }
 
-        if (doctorAppointmentRepository.existsByUserIdAndDateAndTimeonlyAndStatus(dto.getUserId(), dto.getDate(), dto.getTimeonly(), 1L)) {
-            return getAvailabilityResponse(dto, "You already have another appointment at this same time.");
+        LocalTime startTime = dto.getTimeonly();
+        LocalTime endTime = parseEndTimeFromSlot(dto.getTimeSlot(), startTime.plusMinutes(slotDuration));
+
+        // Check for doctor overlap
+        List<DoctorAppointmentEntity> doctorBooked = doctorAppointmentRepository.findByDoctorIdAndDateAndStatus(dto.getDoctorId(), dto.getDate(), 1L);
+        for (DoctorAppointmentEntity appt : doctorBooked) {
+            LocalTime apptStart = appt.getTimeonly();
+            LocalTime apptEnd = parseEndTimeFromSlot(appt.getTimeSlot(), apptStart.plusMinutes(slotDuration));
+            if (startTime.isBefore(apptEnd) && endTime.isAfter(apptStart)) {
+                return getAvailabilityResponse(dto, "The doctor is already booked for this slot.");
+            }
+        }
+
+        // Check for user overlap
+        List<DoctorAppointmentEntity> userBooked = doctorAppointmentRepository.findByUserIdAndDateAndStatus(dto.getUserId(), dto.getDate(), 1L);
+        for (DoctorAppointmentEntity appt : userBooked) {
+            LocalTime apptStart = appt.getTimeonly();
+            LocalTime apptEnd = parseEndTimeFromSlot(appt.getTimeSlot(), apptStart.plusMinutes(slotDuration));
+            if (startTime.isBefore(apptEnd) && endTime.isAfter(apptStart)) {
+                return getAvailabilityResponse(dto, "You already have another appointment at this same time.");
+            }
         }
 
         DoctorAppointmentEntity appointment = DoctorAppointmentEntity.builder()
@@ -301,24 +342,40 @@ public class DoctorService {
         if (!timings.isEmpty() && timings.get(0).getSlotTime() != null) {
             slotDurationMinutes = timings.get(0).getSlotTime();
         }
+        final int finalSlotDuration = slotDurationMinutes;
 
         for (DoctorTimeslotEntity slot : schedule) {
             LocalTime current = slot.getStartTime();
             LocalTime end = slot.getEndTime();
 
-            while (current.plusMinutes(slotDurationMinutes).compareTo(end) <= 0) {
-                if (!bookedTimes.contains(current)) {
+            while (current.plusMinutes(finalSlotDuration).compareTo(end) <= 0) {
+                LocalTime nextStartTime = current.plusMinutes(finalSlotDuration);
+                boolean overlapped = false;
+                for (DoctorAppointmentEntity appt : booked) {
+                    LocalTime apptStart = appt.getTimeonly();
+                    LocalTime apptEnd = parseEndTimeFromSlot(appt.getTimeSlot(), apptStart.plusMinutes(finalSlotDuration));
+                    if (current.isBefore(apptEnd) && nextStartTime.isAfter(apptStart)) {
+                        overlapped = true;
+                        break;
+                    }
+                }
+                
+                if (!overlapped) {
                     slotTimes.add(current);
                 }
-                current = current.plusMinutes(slotDurationMinutes);
+                current = nextStartTime;
             }
         }
 
         return slotTimes.stream()
-            .map(t -> DoctorAvailabilityDTO.TimeSlotDTO.builder()
-                .time(t.format(timeFormatter).toLowerCase())
-                .period(getPeriodOfDay(t))
-                .build())
+            .map(t -> {
+                LocalTime stEnd = t.plusMinutes(finalSlotDuration);
+                return DoctorAvailabilityDTO.TimeSlotDTO.builder()
+                    .time(t.format(timeFormatter).toLowerCase())
+                    .period(getPeriodOfDay(t))
+                    .timeSlot(t.format(timeFormatter).toUpperCase() + " - " + stEnd.format(timeFormatter).toUpperCase())
+                    .build();
+            })
             .collect(Collectors.toList());
     }
 }
