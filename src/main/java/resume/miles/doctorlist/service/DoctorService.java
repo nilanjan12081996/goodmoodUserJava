@@ -24,6 +24,8 @@ import resume.miles.doctorlist.entity.DoctorAppointmentEntity;
 import resume.miles.doctorlist.dto.BookAppointmentDTO;
 import resume.miles.doctorlist.repository.specification.DoctorReviewSpecification;
 import org.springframework.data.jpa.domain.Specification;
+import resume.miles.doctorlist.repository.AppointmentPatientRepository;
+import resume.miles.doctorlist.entity.AppointmentPatientEntity;
 
 import java.time.LocalTime;
 import java.time.LocalDate;
@@ -42,19 +44,22 @@ public class DoctorService {
     private final DoctorReviewRepository doctorReviewRepository;
     private final ContractTypeRepository contractTypeRepository;
     private final DoctorAppointmentRepository doctorAppointmentRepository;
+    private final AppointmentPatientRepository appointmentPatientRepository;
 
     public DoctorService(DoctorRepository doctorRepository, 
                          DoctorTimeslotRepository doctorTimeslotRepository,
                          DoctorSlotTimingRepository doctorSlotTimingRepository,
                          DoctorReviewRepository doctorReviewRepository,
                          ContractTypeRepository contractTypeRepository,
-                         DoctorAppointmentRepository doctorAppointmentRepository) {
+                         DoctorAppointmentRepository doctorAppointmentRepository,
+                         AppointmentPatientRepository appointmentPatientRepository) {
         this.doctorRepository = doctorRepository;
         this.doctorTimeslotRepository = doctorTimeslotRepository;
         this.doctorSlotTimingRepository = doctorSlotTimingRepository;
         this.doctorReviewRepository = doctorReviewRepository;
         this.contractTypeRepository = contractTypeRepository;
         this.doctorAppointmentRepository = doctorAppointmentRepository;
+        this.appointmentPatientRepository = appointmentPatientRepository;
     }
 
     @Transactional(readOnly = true)
@@ -289,7 +294,17 @@ public class DoctorService {
                 .reserve(0L)
                 .build();
         
-        doctorAppointmentRepository.save(appointment);
+        appointment = doctorAppointmentRepository.save(appointment);
+        
+        // Save patient details
+        AppointmentPatientEntity patient = AppointmentPatientEntity.builder()
+                .appointmentId(appointment.getId())
+                .bookingFor(dto.getBookingFor())
+                .gender(dto.getGender())
+                .age(dto.getAge())
+                .problem(dto.getProblem())
+                .build();
+        appointmentPatientRepository.save(patient);
         
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("success", true);

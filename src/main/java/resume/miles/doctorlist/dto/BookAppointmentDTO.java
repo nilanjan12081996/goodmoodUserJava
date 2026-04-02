@@ -18,4 +18,10 @@ public class BookAppointmentDTO {
     private String timeSlot;
     private LocalTime timeonly;
     private Integer calltype;
+
+    // Patient info
+    private String bookingFor;
+    private String gender;
+    private String age;
+    private String problem;
 }
