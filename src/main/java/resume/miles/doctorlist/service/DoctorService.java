@@ -23,6 +23,7 @@ import resume.miles.doctorlist.repository.DoctorAppointmentRepository;
 import resume.miles.doctorlist.entity.DoctorAppointmentEntity;
 import resume.miles.doctorlist.dto.BookAppointmentDTO;
 import resume.miles.doctorlist.repository.specification.DoctorReviewSpecification;
+import resume.miles.doctorlist.repository.specification.DoctorSpecification;
 import org.springframework.data.jpa.domain.Specification;
 import resume.miles.doctorlist.repository.AppointmentPatientRepository;
 import resume.miles.doctorlist.entity.AppointmentPatientEntity;
@@ -76,13 +77,52 @@ public class DoctorService {
 
     @Transactional(readOnly = true)
     public List<DoctorListDTO> getAllDoctors(Long supportId) {
-        // Filter logic would go here if needed, keeping it simple to match controller use
-        return doctorRepository.findAllActiveDoctorsWithDetails().stream()
-            .map(doctor -> DoctorListDTO.builder()
-                .id(doctor.getId())
-                .name(doctor.getFirstName() + " " + doctor.getLastName())
-                .avatar(doctor.getAvatar())
-                .build())
+        Specification<DoctorEntity> spec = Specification.where(DoctorSpecification.isActiveDoctor());
+        
+        if (supportId != null) {
+            spec = spec.and(DoctorSpecification.hasSupportId(supportId));
+        }
+
+        // Fetch all average ratings to avoid N+1 and handle different numeric types from DB
+        Map<Long, Double> ratingsMap = new HashMap<>();
+        doctorReviewRepository.findAllAverageRatingsGroupedByDoctor().forEach(res -> {
+            if (res != null && res.length >= 2 && res[0] != null) {
+                Long docId = ((Number) res[0]).longValue();
+                Double avgRating = (res[1] != null) ? ((Number) res[1]).doubleValue() : null;
+                ratingsMap.put(docId, avgRating);
+            }
+        });
+
+        return doctorRepository.findAll(spec).stream()
+            .map(doctor -> {
+                DoctorServiceEntity serviceMapping = null;
+                if (supportId != null) {
+                    serviceMapping = doctor.getDoctorServices().stream()
+                            .filter(s -> s.getSupportCategoryId().equals(supportId))
+                            .findFirst()
+                            .orElse(null);
+                }
+                
+                // If supportId not provided or no mapping found for that supportId, 
+                // fall back to first service mapping available
+                if (serviceMapping == null && !doctor.getDoctorServices().isEmpty()) {
+                    serviceMapping = doctor.getDoctorServices().iterator().next();
+                }
+
+                return DoctorListDTO.builder()
+                    .id(doctor.getId())
+                    .name(doctor.getFirstName() + " " + doctor.getLastName())
+                    .avatar(doctor.getAvatar())
+                    .experience(doctor.getDoctorAbout() != null ? doctor.getDoctorAbout().getExp() : null)
+                    .languages(doctor.getDoctorAbout() != null ? doctor.getDoctorAbout().getLanguage() : null)
+                    .specializations(doctor.getDoctorSpecializations().stream()
+                        .map(s -> s.getSpecialization().getName())
+                        .collect(Collectors.toList()))
+                    .rating(ratingsMap.get(doctor.getId()))
+                    .videoCallPrice(serviceMapping != null ? serviceMapping.getVideoCallPrice() : null)
+                    .voiceCallPrice(serviceMapping != null ? serviceMapping.getVoiceCallPrice() : null)
+                    .build();
+            })
             .collect(Collectors.toList());
     }
 
@@ -91,11 +131,28 @@ public class DoctorService {
         DoctorEntity doctor = doctorRepository.findActiveDoctorByIdWithDetails(id);
         if (doctor == null) throw new RuntimeException("Doctor not found");
 
+        Double avgRating = doctorReviewRepository.findAverageRatingByDoctorId(id);
+        Integer reviewsCount = doctorReviewRepository.countActiveReviewsByDoctorId(id);
+
+        DoctorServiceEntity serviceMapping = doctor.getDoctorServices().stream().findFirst().orElse(null);
+
         return DoctorDetailsDTO.builder()
                 .id(doctor.getId())
                 .name(doctor.getFirstName() + " " + doctor.getLastName())
                 .avatar(doctor.getAvatar())
-                .about(doctor.getEmail()) // Placeholder until AboutEntity fields are mapped
+                .experience(doctor.getDoctorAbout() != null ? doctor.getDoctorAbout().getExp() : null)
+                .languages(doctor.getDoctorAbout() != null ? doctor.getDoctorAbout().getLanguage() : null)
+                .about(doctor.getDoctorAbout() != null ? doctor.getDoctorAbout().getAbout() : doctor.getEmail())
+                .specializations(doctor.getDoctorSpecializations().stream()
+                        .map(s -> s.getSpecialization().getName())
+                        .collect(Collectors.toList()))
+                .education(doctor.getDoctorEducations().stream()
+                        .map(e -> e.getDegree() + " (" + e.getCourse() + ") from " + e.getInstitute())
+                        .collect(Collectors.toList()))
+                .videoCallPrice(serviceMapping != null ? serviceMapping.getVideoCallPrice() : null)
+                .voiceCallPrice(serviceMapping != null ? serviceMapping.getVoiceCallPrice() : null)
+                .reviews(reviewsCount)
+                .rating(avgRating)
                 .build();
     }
 
