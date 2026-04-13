@@ -1,5 +1,7 @@
 package resume.miles.questionanswermaping.service;
 
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 import org.springframework.data.jpa.domain.Specification;
@@ -51,15 +53,24 @@ public class AwarenessServiceQA {
                         .and(QuestionSpecification.fetchAnswers());
 
         // Step 3: Fetch + map
-        List<QuestionDTO> questions = questionRepository
+        List<QuestionDTO> questionList = questionRepository
                 .findAll(spec)
                 .stream()
                 .map(mapper::toQuestionDTO)
                 .toList();
 
+        // Step 4: Shuffle to provide questions in random order
+        List<QuestionDTO> questions = new ArrayList<>(questionList);
+        Collections.shuffle(questions);
+
+        // Step 5: Return only 5 random questions
+        List<QuestionDTO> limitedQuestions = questions.stream()
+                .limit(5)
+                .toList();
+
         return AwarenessQuestionResponseDTO.builder()
                 .awarenessId(awarenessId)
-                .questions(questions)
+                .questions(limitedQuestions)
                 .build();
     }
 }
