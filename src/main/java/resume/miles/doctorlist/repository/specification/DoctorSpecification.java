@@ -14,7 +14,10 @@ public class DoctorSpecification {
                 root.fetch("doctorEducations", jakarta.persistence.criteria.JoinType.LEFT);
                 root.fetch("doctorServices", jakarta.persistence.criteria.JoinType.LEFT);
             }
-            return cb.equal(root.get("status"), 1);
+            return cb.and(
+                cb.equal(root.get("status"), 1),
+                cb.equal(root.get("adminStatus"), 1)
+            );
         };
     }
 

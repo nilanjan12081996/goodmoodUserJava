@@ -31,6 +31,9 @@ public class DoctorEntity {
     private String mobile;
     private String avatar;
     private Integer status;
+    
+    @Column(name = "admin_status")
+    private Integer adminStatus;
 
     @OneToOne(mappedBy = "doctor", fetch = FetchType.LAZY, cascade = CascadeType.ALL)
     @ToString.Exclude
