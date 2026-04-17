@@ -50,6 +50,18 @@ public class TransactionController {
             response.put("response",transactionDto);
 
             return  ResponseEntity.status(201).body(response);
+        }catch(RuntimeException e){
+            response.put("status",false);
+            response.put("message",e.getMessage());
+            response.put("statusCode",422);
+
+            return  ResponseEntity.status(422).body(response);
+        }catch(RazorpayException e){
+            response.put("status",false);
+            response.put("message",e.getMessage());
+            response.put("statusCode",422);
+
+            return  ResponseEntity.status(422).body(response);
         }catch(Exception e){
 
             response.put("status",false);
@@ -87,7 +99,19 @@ public class TransactionController {
 
             return ResponseEntity.status(200).body(response);
 
-        } catch (Exception e) {
+        } catch(RazorpayException e){
+            response.put("status",false);
+            response.put("message",e.getMessage());
+            response.put("statusCode",422);
+
+            return  ResponseEntity.status(422).body(response);
+        }catch(RuntimeException e){
+            response.put("status",false);
+            response.put("message",e.getMessage());
+            response.put("statusCode",422);
+
+            return  ResponseEntity.status(422).body(response);
+        }catch (Exception e) {
             response.put("status", false);
             response.put("message", e.getMessage());
             response.put("statusCode", 400);

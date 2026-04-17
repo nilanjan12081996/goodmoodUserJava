@@ -9,6 +9,8 @@ import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.CrossOrigin;
+import resume.miles.doctorlist.entity.AppointmentPatientEntity;
+import resume.miles.doctorlist.repository.AppointmentPatientRepository;
 import resume.miles.payment.dto.CreadDto;
 import resume.miles.payment.dto.PaymentVerificationDto;
 import resume.miles.payment.dto.TransactionDetailsDto;
@@ -29,6 +31,7 @@ public class TransactionService {
 
     private final TransactionRepository transactionRepository;
 
+    private final AppointmentPatientRepository appointmentPatientRepository;
 
     @Value("${razorpay.key.id}")
     private String razorpayKeyId;
@@ -40,7 +43,10 @@ public class TransactionService {
 
         Optional<TransactionEntity> existingPendingTxn = transactionRepository
                 .findFirstByAppointmentIdAndTransactionStatus(detailsDto.getAppointmentId(), "PENDING");
-
+        Optional<AppointmentPatientEntity> appointmentPatient = appointmentPatientRepository.findById(detailsDto.getAppointmentId());
+        if(appointmentPatient.isEmpty()) {
+            throw new RuntimeException("Appointment Not Found");
+        }
         if (existingPendingTxn.isPresent()) {
 
             return fristSave(existingPendingTxn.get());
