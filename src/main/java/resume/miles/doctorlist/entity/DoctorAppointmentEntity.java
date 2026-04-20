@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.LocalDateTime;
+import resume.miles.userregister.entity.UserEntity;
 
 @Entity
 @Table(name = "doctor_appointments")
@@ -24,8 +25,16 @@ public class DoctorAppointmentEntity {
     @Column(name = "doctor_id", nullable = false)
     private Long doctorId;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "doctor_id", referencedColumnName = "id", insertable = false, updatable = false)
+    private DoctorEntity doctor;
+
     @Column(name = "user_id", nullable = false)
     private Long userId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id", referencedColumnName = "id", insertable = false, updatable = false)
+    private UserEntity user;
 
     @Column(nullable = false)
     private LocalDate date;

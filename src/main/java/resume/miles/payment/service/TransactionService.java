@@ -12,16 +12,18 @@ import org.springframework.web.bind.annotation.CrossOrigin;
 import resume.miles.doctorlist.entity.AppointmentPatientEntity;
 import resume.miles.doctorlist.repository.AppointmentPatientRepository;
 import resume.miles.payment.dto.CreadDto;
-import resume.miles.payment.dto.PaymentVerificationDto;
-import resume.miles.payment.dto.TransactionDetailsDto;
-import resume.miles.payment.dto.TransactionDto;
+import org.springframework.data.jpa.domain.Specification;
+import resume.miles.payment.dto.*;
 import resume.miles.payment.entity.TransactionEntity;
 
 import resume.miles.payment.mapper.TransactionMapper;
 import resume.miles.payment.repository.TransactionRepository;
+import resume.miles.payment.specification.TransactionSpecification;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 
 @Service
@@ -117,6 +119,40 @@ public class TransactionService {
         return fristSave(transaction);
     }
 
+
+    public List<UserTransactionHistoryDto> getTransactionHistory(Long userId, String doctorName) {
+        Specification<TransactionEntity> spec = Specification.where(TransactionSpecification.hasUserId(userId));
+        if (doctorName != null && !doctorName.isEmpty()) {
+            spec = spec.and(TransactionSpecification.searchByDoctorName(doctorName));
+        }
+
+        List<TransactionEntity> transactions = transactionRepository.findAll(spec);
+
+        return transactions.stream().map(txn -> {
+            String drName = "Unknown Doctor";
+            if (txn.getAppointment() != null && txn.getAppointment().getDoctor() != null) {
+                drName = "Dr. " + txn.getAppointment().getDoctor().getFirstName() + " " + txn.getAppointment().getDoctor().getLastName();
+            }
+
+            String statusDesc = txn.getTransactionStatus();
+            if ("SUCCESS".equalsIgnoreCase(statusDesc)) {
+                statusDesc = "Paid via UPI";
+            } else if ("PENDING".equalsIgnoreCase(statusDesc)) {
+                statusDesc = "Processing payment";
+            } else if ("FAILED".equalsIgnoreCase(statusDesc)) {
+                statusDesc = "Payment failed (UPI)";
+            }
+
+            return UserTransactionHistoryDto.builder()
+                    .id(txn.getId())
+                    .doctorName("Session with " + drName)
+                    .amount(txn.getTransactionPrice())
+                    .transactionStatus(statusDesc)
+                    .status(txn.getStatus())
+                    .date(txn.getCreatedAt())
+                    .build();
+        }).collect(Collectors.toList());
+    }
 
     public CreadDto cead(){
         CreadDto cread = CreadDto.builder()

@@ -5,6 +5,8 @@ import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
+import resume.miles.doctorlist.entity.DoctorAppointmentEntity;
+
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
@@ -23,6 +25,10 @@ public class TransactionEntity {
 
     @Column(name = "appointment_id", nullable = false)
     private Long appointmentId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "appointment_id", referencedColumnName = "id", insertable = false, updatable = false)
+    private DoctorAppointmentEntity appointment;
 
     @Column(name = "transaction_id", nullable = false)
     private String transactionId;

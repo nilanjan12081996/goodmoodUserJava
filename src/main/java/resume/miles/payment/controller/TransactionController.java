@@ -11,12 +11,14 @@ import org.springframework.validation.FieldError;
 import org.springframework.web.bind.annotation.*;
 import resume.miles.payment.dto.CreadDto;
 import resume.miles.payment.dto.PaymentVerificationDto;
-import resume.miles.payment.dto.TransactionDetailsDto;
-import resume.miles.payment.dto.TransactionDto;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import resume.miles.config.JwtUserDetails;
+import resume.miles.payment.dto.*;
 import resume.miles.payment.repository.TransactionRepository;
 import resume.miles.payment.service.TransactionService;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -121,6 +123,28 @@ public class TransactionController {
         }
     }
 
+
+    @GetMapping("/history")
+    public ResponseEntity<?> getTransactionHistory(@AuthenticationPrincipal JwtUserDetails userUtil, @RequestParam(required = false) String doctorName) {
+        Map<String, Object> response = new HashMap<>();
+        try {
+            Long userId = userUtil.getId();
+            List<UserTransactionHistoryDto> history = transactionService.getTransactionHistory(userId, doctorName);
+
+            response.put("status", true);
+            response.put("message", "Transaction history fetched successfully");
+            response.put("statusCode", 200);
+            response.put("response", history);
+
+            return ResponseEntity.status(200).body(response);
+        } catch (Exception e) {
+            response.put("status", false);
+            response.put("message", e.getMessage());
+            response.put("statusCode", 400);
+
+            return ResponseEntity.status(400).body(response);
+        }
+    }
 
     @GetMapping("/cred")
     public ResponseEntity<?> cred() {
