@@ -18,9 +18,30 @@ public class UserService {
 
      public final OtpService otpService;
 
-     public UserService(UserRepository doctorRepository,OtpService otpService){
+     private final FileService fileService;
+
+     public UserService(UserRepository doctorRepository, OtpService otpService, FileService fileService){
         this.doctorRepository = doctorRepository;
         this.otpService = otpService;
+        this.fileService = fileService;
+     }
+
+     @Transactional
+     public String updateAvatar(Long userId, org.springframework.web.multipart.MultipartFile file) {
+         UserEntity user = doctorRepository.findById(userId)
+                 .orElseThrow(() -> new RuntimeException("User not found"));
+         
+         String avatarUrl = fileService.storeFile(file);
+         user.setAvatar(avatarUrl);
+         doctorRepository.save(user);
+         return avatarUrl;
+     }
+
+     @Transactional(readOnly = true)
+     public String getAvatar(Long userId) {
+         UserEntity user = doctorRepository.findById(userId)
+                 .orElseThrow(() -> new RuntimeException("User not found"));
+         return user.getAvatar();
      }
 
      public Map<String, Object> register(String mobile){

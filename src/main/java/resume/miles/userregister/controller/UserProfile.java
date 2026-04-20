@@ -6,9 +6,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import resume.miles.config.JwtUserDetails;
 import resume.miles.config.JwtUtil;
@@ -83,5 +86,58 @@ public class UserProfile {
                     "error",e.getStackTrace()
                 ));
             }
+    }
+
+    @PostMapping("/upload-avatar")
+    public ResponseEntity<?> uploadAvatar(@RequestParam("file") MultipartFile file, @AuthenticationPrincipal JwtUserDetails userUtil) {
+        try {
+            Long id = userUtil.getId();
+            String avatarUrl = doctorService.updateAvatar(id, file);
+            return ResponseEntity.status(200).body(Map.of(
+                "message", "Avatar uploaded successfully",
+                "avatarUrl", avatarUrl,
+                "statusCode", 200,
+                "status", true
+            ));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(400).body(Map.of(
+                "message", e.getMessage(),
+                "statusCode", 400,
+                "status", false
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(400).body(Map.of(
+                "message", e.getMessage(),
+                "statusCode", 400,
+                "status", false,
+                "error", e.getStackTrace()
+            ));
+        }
+    }
+
+    @GetMapping("/avatar")
+    public ResponseEntity<?> getAvatar(@AuthenticationPrincipal JwtUserDetails userUtil) {
+        try {
+            Long id = userUtil.getId();
+            String avatarUrl = doctorService.getAvatar(id);
+            return ResponseEntity.status(200).body(Map.of(
+                "avatarUrl", avatarUrl != null ? avatarUrl : "",
+                "statusCode", 200,
+                "status", true
+            ));
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(400).body(Map.of(
+                "message", e.getMessage(),
+                "statusCode", 400,
+                "status", false
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(400).body(Map.of(
+                "message", e.getMessage(),
+                "statusCode", 400,
+                "status", false,
+                "error", e.getStackTrace()
+            ));
+        }
     }
 }
