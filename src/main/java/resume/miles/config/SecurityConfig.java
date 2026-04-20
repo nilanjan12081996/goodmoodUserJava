@@ -53,6 +53,7 @@ public class SecurityConfig {
                             "/api/resume/parse",
                             "/actuator/**",
                             "/api/user/posts/**"
+
                         ).permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated()
