@@ -60,6 +60,9 @@ public class DoctorAppointmentEntity {
     @Column(name = "updated_at", insertable = false, updatable = false)
     private LocalDateTime updatedAt;
 
+    @Column(name = "support_id")
+    private Long supportId;
+
     @Column(name = "is_complete")
     @Builder.Default
     private Integer isComplete = 0;

@@ -19,6 +19,8 @@ public class BookAppointmentDTO {
     private LocalTime timeonly;
     private Integer calltype;
 
+    private Long supportId;
+
     // Patient info
     private String bookingFor;
     private String gender;

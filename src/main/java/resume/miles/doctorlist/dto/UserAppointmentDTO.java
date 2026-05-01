@@ -18,4 +18,5 @@ public class UserAppointmentDTO {
     private String date; // Format: Sunday, 23 March
     private String timeSlot;
     private Integer callType;
+    private Long supportId;
 }

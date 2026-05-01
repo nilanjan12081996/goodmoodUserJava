@@ -381,6 +381,7 @@ public class DoctorService {
                 .timeSlot(dto.getTimeSlot())
                 .timeonly(dto.getTimeonly())
                 .calltype(dto.getCalltype())
+                .supportId(dto.getSupportId())
                 .status(1L)
                 .reserve(0L)
                 .build();
@@ -446,6 +447,7 @@ public class DoctorService {
                 .date(appt.getDate().format(dateFormatter))
                 .timeSlot(appt.getTimeSlot())
                 .callType(appt.getCalltype())
+                .supportId(appt.getSupportId())
                 .build();
         }).collect(Collectors.toList());
     }
@@ -498,7 +500,18 @@ public class DoctorService {
         Integer exp = (doctor.getDoctorAbout() != null) ? doctor.getDoctorAbout().getExp() : 0;
         
         // Package Info
-        DoctorServiceEntity service = doctor.getDoctorServices().stream().findFirst().orElse(null);
+        DoctorServiceEntity service = null;
+        if (appt.getSupportId() != null) {
+            service = doctor.getDoctorServices().stream()
+                    .filter(s -> s.getSupportCategoryId().equals(appt.getSupportId()))
+                    .findFirst()
+                    .orElse(null);
+        }
+        
+        if (service == null) {
+            service = doctor.getDoctorServices().stream().findFirst().orElse(null);
+        }
+
         String callCategory = "Consultation";
         Double price = 0.0;
         if (service != null) {
@@ -517,6 +530,7 @@ public class DoctorService {
                 .date(formattedDate)
                 .timeSlot(formattedTime)
                 .bookingFor(patientInfo.getBookingFor())
+                .supportId(appt.getSupportId())
                 .patientFullName(patientFullName.trim())
                 .patientGender(patientInfo.getGender())
                 .patientAge(patientInfo.getAge() != null ? patientInfo.getAge() + " Years" : "")
