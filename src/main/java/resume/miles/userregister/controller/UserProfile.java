@@ -24,8 +24,7 @@ import resume.miles.userregister.service.OtpService;
 @RestController
 @RequestMapping("/api/user/profile")
 public class UserProfile {
-    msg.otp.template-id=69f49edae9e36e0af80f2fe4
-    msg.otp.auth-key=511693AG5sVMWHWt69f07092P1
+
      private final UserService doctorService;
 
     private final JwtUtil jwtUtills;
