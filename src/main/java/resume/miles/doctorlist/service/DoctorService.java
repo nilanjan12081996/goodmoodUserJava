@@ -125,57 +125,57 @@ public class DoctorService {
 //            })
 //            .collect(Collectors.toList());
 //    }
-@Transactional(readOnly = true)
-public List<DoctorListDTO> getAllDoctors(Long supportId) {
-    Specification<DoctorEntity> spec = Specification.where(DoctorSpecification.isActiveDoctor());
+    @Transactional(readOnly = true)
+    public List<DoctorListDTO> getAllDoctors(Long supportId) {
+        Specification<DoctorEntity> spec = Specification.where(DoctorSpecification.isActiveDoctor());
 
-    if (supportId != null) {
-        spec = spec.and(DoctorSpecification.hasSupportId(supportId));
-    }
-
-    // Fetch all average ratings to avoid N+1 and handle different numeric types from DB
-    Map<Long, Double> ratingsMap = new HashMap<>();
-    doctorReviewRepository.findAllAverageRatingsGroupedByDoctor().forEach(res -> {
-        if (res != null && res.length >= 2 && res[0] != null) {
-            Long docId = ((Number) res[0]).longValue();
-            Double avgRating = (res[1] != null) ? ((Number) res[1]).doubleValue() : null;
-            ratingsMap.put(docId, avgRating);
+        if (supportId != null) {
+            spec = spec.and(DoctorSpecification.hasSupportId(supportId));
         }
-    });
 
-    return doctorRepository.findAll(spec).stream()
-            .map(doctor -> {
-                DoctorServiceEntity serviceMapping = null;
-                if (supportId != null) {
-                    serviceMapping = doctor.getDoctorServices().stream()
-                            .filter(s -> s.getSupportCategoryId().equals(supportId))
-                            .findFirst()
-                            .orElse(null);
-                }
+        // Fetch all average ratings to avoid N+1 and handle different numeric types from DB
+        Map<Long, Double> ratingsMap = new HashMap<>();
+        doctorReviewRepository.findAllAverageRatingsGroupedByDoctor().forEach(res -> {
+            if (res != null && res.length >= 2 && res[0] != null) {
+                Long docId = ((Number) res[0]).longValue();
+                Double avgRating = (res[1] != null) ? ((Number) res[1]).doubleValue() : null;
+                ratingsMap.put(docId, avgRating);
+            }
+        });
 
-                // If supportId not provided or no mapping found for that supportId,
-                // fall back to first service mapping available
-                if (serviceMapping == null && !doctor.getDoctorServices().isEmpty()) {
-                    serviceMapping = doctor.getDoctorServices().iterator().next();
-                }
+        return doctorRepository.findAll(spec).stream()
+                .map(doctor -> {
+                    DoctorServiceEntity serviceMapping = null;
+                    if (supportId != null) {
+                        serviceMapping = doctor.getDoctorServices().stream()
+                                .filter(s -> s.getSupportCategoryId().equals(supportId))
+                                .findFirst()
+                                .orElse(null);
+                    }
 
-                return DoctorListDTO.builder()
-                        .id(doctor.getId())
-                        .name(doctor.getFirstName() + " " + doctor.getLastName())
-                        .avatar(doctor.getAvatar())
-                        .experience(doctor.getDoctorAbout() != null ? doctor.getDoctorAbout().getExp() : null)
-                        .languages(doctor.getDoctorAbout() != null ? doctor.getDoctorAbout().getLanguage() : null)
-                        .specializations(doctor.getDoctorSpecializations().stream()
-                                .filter(s -> s.getSpecialization() != null) // Added null safety check
-                                .map(s -> s.getSpecialization().getName())
-                                .collect(Collectors.toList()))
-                        .rating(ratingsMap.get(doctor.getId()))
-                        .videoCallPrice(serviceMapping != null ? serviceMapping.getVideoCallPrice() : null)
-                        .voiceCallPrice(serviceMapping != null ? serviceMapping.getVoiceCallPrice() : null)
-                        .build();
-            })
-            .collect(Collectors.toList());
-}
+                    // If supportId not provided or no mapping found for that supportId,
+                    // fall back to first service mapping available
+                    if (serviceMapping == null && !doctor.getDoctorServices().isEmpty()) {
+                        serviceMapping = doctor.getDoctorServices().iterator().next();
+                    }
+
+                    return DoctorListDTO.builder()
+                            .id(doctor.getId())
+                            .name(doctor.getFirstName() + " " + doctor.getLastName())
+                            .avatar(doctor.getAvatar())
+                            .experience(doctor.getDoctorAbout() != null ? doctor.getDoctorAbout().getExp() : null)
+                            .languages(doctor.getDoctorAbout() != null ? doctor.getDoctorAbout().getLanguage() : null)
+                            .specializations(doctor.getDoctorSpecializations().stream()
+                                    .filter(s -> s.getSpecialization() != null) // Added null safety check
+                                    .map(s -> s.getSpecialization().getName())
+                                    .collect(Collectors.toList()))
+                            .rating(ratingsMap.get(doctor.getId()))
+                            .videoCallPrice(serviceMapping != null ? serviceMapping.getVideoCallPrice() : null)
+                            .voiceCallPrice(serviceMapping != null ? serviceMapping.getVoiceCallPrice() : null)
+                            .build();
+                })
+                .collect(Collectors.toList());
+    }
     @Transactional(readOnly = true)
     public DoctorDetailsDTO getDoctorDetails(Long id) {
         DoctorEntity doctor = doctorRepository.findActiveDoctorByIdWithDetails(id);
