@@ -22,6 +22,7 @@ public class AppointmentDetailsDTO {
     private String date; // March 23, 2025
     private String timeSlot; // 10:00 - 10:50 (50 minutes)
     private String bookingFor;
+    private Long supportId;
     
     // Patient Info
     private String patientFullName; // User's full name or patient name
