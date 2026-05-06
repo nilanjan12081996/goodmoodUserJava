@@ -9,7 +9,7 @@ import resume.miles.userregister.dto.UserProfileDTO;
 import resume.miles.userregister.entity.UserEntity;
 import resume.miles.userregister.mapper.UserMapper;
 import resume.miles.userregister.repository.UserRepository;
-import resume.miles.userregister.repository.specification.DoctorSpecification;
+
 
 @Service
 public class UserService {
@@ -19,11 +19,15 @@ public class UserService {
      public final OtpService otpService;
 
      private final FileService fileService;
+     private final Msg91Service msg91Service;
 
-     public UserService(UserRepository doctorRepository, OtpService otpService, FileService fileService){
+     
+
+     public UserService(UserRepository doctorRepository, OtpService otpService, FileService fileService,Msg91Service msg91Service){
         this.doctorRepository = doctorRepository;
         this.otpService = otpService;
         this.fileService = fileService;
+        this.msg91Service = msg91Service;
      }
 
      @Transactional
@@ -53,7 +57,8 @@ public class UserService {
         });
         Long id = doctorData.getId();
         Integer otp = otpService.otpGenerate(id);
-        
+         msg91Service.sendCustomOtp(mobile, otp);
+           
         return Map.of(
             "id",id,
             "otp",otp,
