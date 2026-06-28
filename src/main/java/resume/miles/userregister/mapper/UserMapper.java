@@ -57,14 +57,23 @@ public class UserMapper {
                 .build();
     }
 
+    // public static UserEntity toEntity(String mobile) {
+    //     String ts = String.valueOf(System.currentTimeMillis());
+    //     return UserEntity.builder()
+    //             .mobile(mobile)
+    //             .firstName("goodmooduser")
+    //             .lastName("user")
+    //             .username("goodmoodUser+" + ts)
+    //             .email("goodmood+" + ts + "@yopmail.com")
+    //             .status(1)
+    //             .isDeleted(0)
+    //             .build();
+    // }
+
     public static UserEntity toEntity(String mobile) {
-        String ts = String.valueOf(System.currentTimeMillis());
         return UserEntity.builder()
                 .mobile(mobile)
-                .firstName("goodmooduser")
-                .lastName("user")
-                .username("goodmoodUser+" + ts)
-                .email("goodmood+" + ts + "@yopmail.com")
+                .username("goodmood_" + mobile)
                 .status(1)
                 .isDeleted(0)
                 .build();
