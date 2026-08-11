@@ -33,8 +33,9 @@ public class SubsidebarSpecification {
 
             return cb.and(
                 cb.equal(root.get("status"), 1),
-                cb.isNotNull(awarenessJoin.get("id"))
-        );
+                cb.isNotNull(awarenessJoin.get("id")),
+                cb.equal(awarenessJoin.get("status"), 1)
+            );
         };
     }
 }

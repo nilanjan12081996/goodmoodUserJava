@@ -35,16 +35,11 @@ public class AwarenessService {
         List<SubSidebarEntity> entities =
                 subSidebarRepository.findAll(SubsidebarSpecification.awarenessListing());
         
-        List<SubsidebarDto> subsidebarDt = entities.stream().map(SubsidebarMapper::toDto).toList()  ;
+        List<SubsidebarDto> subsidebarDt = entities.stream()
+                .map(SubsidebarMapper::toDto)
+                .filter(dto -> dto.getAwarenessItemDto() != null && !dto.getAwarenessItemDto().isEmpty())
+                .toList();
         return subsidebarDt;
-
-        // return entities.stream()
-        //     .filter(subSidebar ->
-        //             subSidebar.getAwarenessList() != null &&
-        //             !subSidebar.getAwarenessList().isEmpty()
-        //     )
-        //     .map(SubsidebarMapper::toDto)
-        //     .toList();
         
     }
 }
