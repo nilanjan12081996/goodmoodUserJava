@@ -29,7 +29,7 @@ import java.util.LinkedHashMap;
 @RestController
 @RequestMapping("/api/doctors")
 public class DoctorController {
-
+    
     private final DoctorService doctorService;
 
     public DoctorController(DoctorService doctorService) {
@@ -76,6 +76,24 @@ public class DoctorController {
     public ResponseEntity<?> getCompletedAppointments(@AuthenticationPrincipal JwtUserDetails userDetails) {
         try {
             List<UserAppointmentDTO> appointments = doctorService.getUserAppointments(userDetails.getId(), false);
+            return ResponseEntity.ok(Map.of(
+                "data", appointments,
+                "statusCode", 200,
+                "status", true
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(400).body(Map.of(
+                "message", e.getMessage(),
+                "statusCode", 400,
+                "status", false
+            ));
+        }
+    }
+
+    @GetMapping("/appointments/all")
+    public ResponseEntity<?> getAllAppointments(@AuthenticationPrincipal JwtUserDetails userDetails) {
+        try {
+            List<UserAppointmentDTO> appointments = doctorService.getAllUserAppointments(userDetails.getId());
             return ResponseEntity.ok(Map.of(
                 "data", appointments,
                 "statusCode", 200,

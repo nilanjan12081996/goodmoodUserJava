@@ -503,6 +503,34 @@ public class DoctorService {
     }
 
     @Transactional(readOnly = true)
+    public List<UserAppointmentDTO> getAllUserAppointments(Long userId) {
+        List<DoctorAppointmentEntity> appointments = doctorAppointmentRepository.findByUserIdAndStatusOrderByDateDescTimeonlyDesc(userId, 1L);
+
+        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("EEEE, d MMMM", Locale.ENGLISH);
+
+        return appointments.stream().map(appt -> {
+            DoctorEntity doctor = doctorRepository.findById(appt.getDoctorId()).orElse(null);
+            String docName = doctor != null ? doctor.getFirstName() + " " + doctor.getLastName() : "Unknown Doctor";
+            String docAvatar = doctor != null ? doctor.getAvatar() : null;
+            String spec = (doctor != null && doctor.getDoctorSpecializations() != null && !doctor.getDoctorSpecializations().isEmpty()) 
+                ? doctor.getDoctorSpecializations().iterator().next().getSpecialization().getName() 
+                : "Therapist";
+
+            return UserAppointmentDTO.builder()
+                .id(appt.getId())
+                .doctorId(appt.getDoctorId())
+                .doctorName(docName)
+                .doctorAvatar(docAvatar)
+                .specialization(spec)
+                .date(appt.getDate().format(dateFormatter))
+                .timeSlot(appt.getTimeSlot())
+                .callType(appt.getCalltype())
+                .supportId(appt.getSupportId())
+                .build();
+        }).collect(Collectors.toList());
+    }
+
+    @Transactional(readOnly = true)
     public AppointmentDetailsDTO getAppointmentDetails(Long appointmentId) {
         DoctorAppointmentEntity appt = doctorAppointmentRepository.findById(appointmentId)
                 .orElseThrow(() -> new RuntimeException("Appointment not found"));
