@@ -13,7 +13,7 @@ import lombok.RequiredArgsConstructor;
 import resume.miles.blogs.dto.BlogDto;
 import resume.miles.blogs.service.BlogService;
 
-@RestController
+@RestController("userBlogsController")
 @RequestMapping("/api/user/blogs")
 @RequiredArgsConstructor
 public class BlogController {

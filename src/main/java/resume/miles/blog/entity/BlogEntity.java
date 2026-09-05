@@ -11,7 +11,7 @@ import resume.miles.config.baseclass.BaseEntity;
 
 import java.time.LocalDateTime;
 
-@Entity
+@Entity(name = "userBlogEntity")
 @Table(name = "blogs")
 @Data
 @Builder

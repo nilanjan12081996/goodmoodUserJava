@@ -9,7 +9,7 @@ import resume.miles.blog.repository.BlogRepository;
 
 import java.util.List;
 
-@Service
+@Service("userBlogService")
 @RequiredArgsConstructor
 public class BlogService {
 

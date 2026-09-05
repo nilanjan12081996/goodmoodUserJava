@@ -11,7 +11,7 @@ import resume.miles.blogs.entity.BlogEntity;
 import resume.miles.blogs.mapper.BlogMapper;
 import resume.miles.blogs.repository.BlogRepository;
 
-@Service
+@Service("userBlogsService")
 @RequiredArgsConstructor
 public class BlogService {
     

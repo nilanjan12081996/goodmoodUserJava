@@ -13,7 +13,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
-@RestController
+@RestController("userBlogController")
 @RequestMapping("/api/user/blog")
 @RequiredArgsConstructor
 public class BlogController {

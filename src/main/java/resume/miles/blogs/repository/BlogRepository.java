@@ -7,7 +7,7 @@ import org.springframework.stereotype.Repository;
 
 import resume.miles.blogs.entity.BlogEntity;
 
-@Repository
+@Repository("userBlogsRepository")
 public interface BlogRepository extends JpaRepository<BlogEntity, Long> {
     List<BlogEntity> findByAwarenessIdAndStatus(Long awarenessId, Integer status);
 }

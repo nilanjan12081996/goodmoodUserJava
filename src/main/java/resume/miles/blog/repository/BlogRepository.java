@@ -6,7 +6,7 @@ import resume.miles.blog.entity.BlogEntity;
 
 import java.util.List;
 
-@Repository
+@Repository("userBlogRepository")
 public interface BlogRepository extends JpaRepository<BlogEntity, Long> {
     List<BlogEntity> findByAwarenessId(Long awarenessId);
 }

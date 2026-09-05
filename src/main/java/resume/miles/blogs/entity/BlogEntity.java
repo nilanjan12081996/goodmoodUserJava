@@ -11,7 +11,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import resume.miles.config.baseclass.BaseEntity;
 
-@Entity
+@Entity(name = "userBlogsEntity")
 @Table(name="blogs")
 @Data
 @AllArgsConstructor
