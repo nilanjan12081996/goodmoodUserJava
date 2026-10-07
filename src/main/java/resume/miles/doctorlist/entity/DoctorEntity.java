@@ -59,4 +59,7 @@ public class DoctorEntity {
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private Set<DoctorServiceEntity> doctorServices;
+
+    @Column(name = "fcm_token", columnDefinition = "TEXT")
+    private String fcmToken;
 }

@@ -55,11 +55,14 @@ public class DoctorController {
     }
 
     @GetMapping("/appointments/upcoming")
-    public ResponseEntity<?> getUpcomingAppointments(@AuthenticationPrincipal JwtUserDetails userDetails) {
+    public ResponseEntity<?> getUpcomingAppointments(
+            @AuthenticationPrincipal JwtUserDetails userDetails,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
         try {
-            List<UserAppointmentDTO> appointments = doctorService.getUserAppointments(userDetails.getId(), true);
+            Map<String, Object> responseData = doctorService.getUserAppointments(userDetails.getId(), true, page, size);
             return ResponseEntity.ok(Map.of(
-                "data", appointments,
+                "data", responseData,
                 "statusCode", 200,
                 "status", true
             ));
@@ -73,11 +76,14 @@ public class DoctorController {
     }
 
     @GetMapping("/appointments/completed")
-    public ResponseEntity<?> getCompletedAppointments(@AuthenticationPrincipal JwtUserDetails userDetails) {
+    public ResponseEntity<?> getCompletedAppointments(
+            @AuthenticationPrincipal JwtUserDetails userDetails,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
         try {
-            List<UserAppointmentDTO> appointments = doctorService.getUserAppointments(userDetails.getId(), false);
+            Map<String, Object> responseData = doctorService.getUserAppointments(userDetails.getId(), false, page, size);
             return ResponseEntity.ok(Map.of(
-                "data", appointments,
+                "data", responseData,
                 "statusCode", 200,
                 "status", true
             ));
@@ -183,8 +189,9 @@ public class DoctorController {
                 "status", true
             ));
         } catch (Exception e) {
+            e.printStackTrace();
             return ResponseEntity.status(400).body(Map.of(
-                "message", e.getMessage(),
+                "message", e.getMessage() != null ? e.getMessage() : "Unknown error",
                 "statusCode", 400,
                 "status", false
             ));

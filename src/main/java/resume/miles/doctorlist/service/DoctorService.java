@@ -42,6 +42,8 @@ import java.time.format.TextStyle;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import resume.miles.config.firebase.FcmService;
+
 @Service
 public class DoctorService {
 
@@ -54,6 +56,8 @@ public class DoctorService {
     private final AppointmentPatientRepository appointmentPatientRepository;
     private final UserRepository userRepository;
     private final SupportCategoryRepository supportCategoryRepository;
+    private final FcmService fcmService;
+    private final AppointmentEmailService appointmentEmailService;
 
     public DoctorService(DoctorRepository doctorRepository, 
                          DoctorTimeslotRepository doctorTimeslotRepository,
@@ -63,7 +67,9 @@ public class DoctorService {
                          DoctorAppointmentRepository doctorAppointmentRepository,
                          AppointmentPatientRepository appointmentPatientRepository,
                          UserRepository userRepository,
-                         SupportCategoryRepository supportCategoryRepository) {
+                         SupportCategoryRepository supportCategoryRepository,
+                         FcmService fcmService,
+                         AppointmentEmailService appointmentEmailService) {
         this.doctorRepository = doctorRepository;
         this.doctorTimeslotRepository = doctorTimeslotRepository;
         this.doctorSlotTimingRepository = doctorSlotTimingRepository;
@@ -73,6 +79,8 @@ public class DoctorService {
         this.appointmentPatientRepository = appointmentPatientRepository;
         this.userRepository = userRepository;
         this.supportCategoryRepository = supportCategoryRepository;
+        this.fcmService = fcmService;
+        this.appointmentEmailService = appointmentEmailService;
     }
 
 //    @Transactional(readOnly = true)
@@ -197,7 +205,21 @@ public class DoctorService {
                         .map(s -> s.getSpecialization().getName())
                         .collect(Collectors.toList()))
                 .education(doctor.getDoctorEducations().stream()
-                        .map(e -> e.getDegree() + " (" + e.getCourse() + ") from " + e.getInstitute())
+                        .map(e -> {
+                            StringBuilder sb = new StringBuilder();
+                            if (e.getDegree() != null && !e.getDegree().trim().isEmpty()) {
+                                sb.append(e.getDegree().trim());
+                            }
+                            if (e.getCourse() != null && !e.getCourse().trim().isEmpty() && !e.getCourse().trim().equalsIgnoreCase("null")) {
+                                sb.append(" (").append(e.getCourse().trim()).append(")");
+                            }
+                            if (e.getInstitute() != null && !e.getInstitute().trim().isEmpty() && !e.getInstitute().trim().equalsIgnoreCase("null")) {
+                                if (sb.length() > 0) sb.append(" from ");
+                                sb.append(e.getInstitute().trim());
+                            }
+                            return sb.toString().trim();
+                        })
+                        .filter(s -> !s.isEmpty())
                         .collect(Collectors.toList()))
                 .videoCallPrice(serviceMapping != null ? serviceMapping.getVideoCallPrice() : null)
                 .voiceCallPrice(serviceMapping != null ? serviceMapping.getVoiceCallPrice() : null)
@@ -235,18 +257,33 @@ public class DoctorService {
 
             LocalTime current = slot.getStartTime();
             LocalTime end = slot.getEndTime();
+            int endMins = end.getHour() * 60 + end.getMinute();
+            if (endMins == 0) endMins = 1440; // Treat 00:00 as 24:00
 
-            while (current.plusMinutes(slotDurationMinutes).compareTo(end) <= 0) {
+            while (true) {
+                LocalTime nextTime = current.plusMinutes(slotDurationMinutes);
+                int nextMins = nextTime.getHour() * 60 + nextTime.getMinute();
+                // If the next time wrapped around (e.g. 23:50 -> 00:40), it crosses midnight.
+                // Or if it simply exceeds endMins.
+                int currentMins = current.getHour() * 60 + current.getMinute();
+                int effectiveNextMins = nextMins;
+                if (effectiveNextMins < currentMins && effectiveNextMins == 0) {
+                     effectiveNextMins = 1440; // Exactly midnight wrap
+                }
+
+                if (effectiveNextMins > endMins || (effectiveNextMins < currentMins && effectiveNextMins != 1440)) {
+                    break;
+                }
+
                 if (!addedTimes.contains(current)) {
-                    LocalTime slotEnd = current.plusMinutes(slotDurationMinutes);
                     dto.getSlots().add(DoctorAvailabilityDTO.TimeSlotDTO.builder()
                             .time(current.format(timeFormatter).toLowerCase())
                             .period(getPeriodOfDay(current))
-                            .timeSlot(current.format(timeFormatter).toUpperCase() + " - " + slotEnd.format(timeFormatter).toUpperCase())
+                            .timeSlot(current.format(timeFormatter).toUpperCase() + " - " + nextTime.format(timeFormatter).toUpperCase())
                             .build());
                     addedTimes.add(current);
                 }
-                current = current.plusMinutes(slotDurationMinutes);
+                current = nextTime;
             }
         }
 
@@ -274,13 +311,22 @@ public class DoctorService {
 
     @Transactional
     public void addDoctorReview(AddDoctorReviewDTO reviewDto, Long userId) {
-        DoctorReviewEntity review = DoctorReviewEntity.builder()
-                .doctorId(reviewDto.getDoctorId())
-                .userId(userId)
-                .rating(reviewDto.getRating())
-                .reviewText(reviewDto.getText())
-                .status(1)
-                .build();
+        List<DoctorReviewEntity> existingReviews = doctorReviewRepository.findByDoctorIdAndUserId(reviewDto.getDoctorId(), userId);
+        
+        DoctorReviewEntity review;
+        if (!existingReviews.isEmpty()) {
+            review = existingReviews.get(0);
+            review.setRating(reviewDto.getRating());
+            review.setReviewText(reviewDto.getText());
+        } else {
+            review = DoctorReviewEntity.builder()
+                    .doctorId(reviewDto.getDoctorId())
+                    .userId(userId)
+                    .rating(reviewDto.getRating())
+                    .reviewText(reviewDto.getText())
+                    .status(1)
+                    .build();
+        }
 
         doctorReviewRepository.save(review);
     }
@@ -390,7 +436,14 @@ public class DoctorService {
         final int finalSlotDuration = slotDuration;
         for (DoctorTimeslotEntity slot : schedule) {
             LocalTime current = slot.getStartTime();
-            while (!current.plusMinutes(finalSlotDuration).isAfter(slot.getEndTime())) {
+            int endMins = slot.getEndTime().getHour() * 60 + slot.getEndTime().getMinute();
+            if (endMins == 0) endMins = 1440; // 00:00:00 end time represents midnight (24:00 / 1440 mins)
+
+            while (true) {
+                int currentMins = current.getHour() * 60 + current.getMinute();
+                if (currentMins + finalSlotDuration > endMins) {
+                    break;
+                }
                 if (current.equals(startTime)) {
                     isValidSlot = true;
                     break;
@@ -448,39 +501,66 @@ public class DoctorService {
                 .build();
         appointmentPatientRepository.save(patient);
         
+        // Send Push Notifications
+        try {
+            doctorRepository.findById(dto.getDoctorId()).ifPresent(doctor -> {
+                if (doctor.getFcmToken() != null && !doctor.getFcmToken().trim().isEmpty()) {
+                    fcmService.sendPushNotification(
+                            doctor.getFcmToken(),
+                            "New Appointment Booked",
+                            "You have a new appointment scheduled on " + dto.getDate() + " at " + dto.getTimeonly()
+                    );
+                }
+            });
+
+            userRepository.findById(dto.getUserId()).ifPresent(user -> {
+                if (user.getFcmToken() != null && !user.getFcmToken().trim().isEmpty()) {
+                    fcmService.sendPushNotification(
+                            user.getFcmToken(),
+                            "Appointment Confirmed",
+                            "Your appointment is confirmed for " + dto.getDate() + " at " + dto.getTimeonly()
+                    );
+                }
+            });
+        } catch (Exception e) {
+            System.err.println("Failed to send push notification: " + e.getMessage());
+        }
+
+        // Send Professional Branded Confirmation Emails to Patient & Doctor
+        try {
+            appointmentEmailService.sendAppointmentConfirmationEmailsAsync(appointment.getId());
+        } catch (Exception e) {
+            System.err.println("Failed to trigger appointment confirmation emails: " + e.getMessage());
+        }
+
         Map<String, Object> response = new LinkedHashMap<>();
         response.put("success", true);
         response.put("message", "Appointment booked successfully");
+        response.put("data", Map.of(
+            "id", appointment.getId(),
+            "appointmentId", appointment.getId()
+        ));
         return response;
     }
 
     @Transactional(readOnly = true)
-    public List<UserAppointmentDTO> getUserAppointments(Long userId, boolean upcoming) {
+    public Map<String, Object> getUserAppointments(Long userId, boolean upcoming, int page, int size) {
         LocalDate today = LocalDate.now();
+        org.springframework.data.domain.Pageable pageable = org.springframework.data.domain.PageRequest.of(page, size);
+        org.springframework.data.domain.Page<DoctorAppointmentEntity> appointmentPage;
         List<DoctorAppointmentEntity> appointments;
         
         if (upcoming) {
             // Upcoming: Date is today or later AND not complete
-            appointments = doctorAppointmentRepository.findByUserIdAndDateGreaterThanEqualAndIsCompleteAndStatusOrderByDateAscTimeonlyAsc(userId, today, 0, 1L);
+            appointmentPage = doctorAppointmentRepository.findUpcomingAppointments(userId, today, 0, 1L, pageable);
         } else {
             // Completed: Either explicitly marked as complete OR the date is in the past
-            // Use a Set to handle potential duplicates between marked complete and past date
-            Set<DoctorAppointmentEntity> completeSet = new LinkedHashSet<>();
-            completeSet.addAll(doctorAppointmentRepository.findByUserIdAndIsCompleteAndStatusOrderByDateDescTimeonlyDesc(userId, 1, 1L));
-            completeSet.addAll(doctorAppointmentRepository.findByUserIdAndDateLessThanAndIsCompleteAndStatusOrderByDateDescTimeonlyDesc(userId, today, 0, 1L));
-            
-            appointments = new ArrayList<>(completeSet);
-            // Sort merged list (descending date and time)
-            appointments.sort((a1, a2) -> {
-                int dateComp = a2.getDate().compareTo(a1.getDate());
-                if (dateComp != 0) return dateComp;
-                return a2.getTimeonly().compareTo(a1.getTimeonly());
-            });
+            appointmentPage = doctorAppointmentRepository.findCompletedAppointments(userId, today, 1, 0, 1L, pageable);
         }
 
         DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern("EEEE, d MMMM", Locale.ENGLISH);
 
-        return appointments.stream().map(appt -> {
+        List<UserAppointmentDTO> dtoList = appointmentPage.getContent().stream().map(appt -> {
             DoctorEntity doctor = doctorRepository.findById(appt.getDoctorId()).orElse(null);
             String docName = doctor != null ? doctor.getFirstName() + " " + doctor.getLastName() : "Unknown Doctor";
             String docAvatar = doctor != null ? doctor.getAvatar() : null;
@@ -500,6 +580,13 @@ public class DoctorService {
                 .supportId(appt.getSupportId())
                 .build();
         }).collect(Collectors.toList());
+
+        Map<String, Object> result = new LinkedHashMap<>();
+        result.put("content", dtoList);
+        result.put("currentPage", appointmentPage.getNumber());
+        result.put("totalElements", appointmentPage.getTotalElements());
+        result.put("totalPages", appointmentPage.getTotalPages());
+        return result;
     }
 
     @Transactional(readOnly = true)
@@ -678,8 +765,14 @@ public class DoctorService {
         for (DoctorTimeslotEntity slot : schedule) {
             LocalTime current = slot.getStartTime();
             LocalTime end = slot.getEndTime();
+            int endMins = end.getHour() * 60 + end.getMinute();
+            if (endMins == 0) endMins = 1440; // 00:00 represents midnight (24:00 / 1440 mins)
 
-            while (current.plusMinutes(finalSlotDuration).compareTo(end) <= 0) {
+            while (true) {
+                int currentMins = current.getHour() * 60 + current.getMinute();
+                if (currentMins + finalSlotDuration > endMins) {
+                    break;
+                }
                 LocalTime nextStartTime = current.plusMinutes(finalSlotDuration);
                 boolean overlapped = false;
                 for (DoctorAppointmentEntity appt : booked) {

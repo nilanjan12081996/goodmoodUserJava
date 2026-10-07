@@ -13,6 +13,6 @@ public interface DoctorTimeslotRepository extends JpaRepository<DoctorTimeslotEn
     @Query("SELECT dt FROM DoctorTimeslotEntity dt JOIN FETCH dt.day d WHERE dt.status = 1 AND dt.doctorId = :doctorId ORDER BY d.id, dt.startTime")
     List<DoctorTimeslotEntity> findActiveTimeslotsByDoctorIdWithDays(Long doctorId);
 
-    @Query("SELECT dt FROM DoctorTimeslotEntity dt JOIN FETCH dt.day d WHERE dt.status = 1 AND dt.doctorId = :doctorId AND dt.day.dayName = :dayName ORDER BY dt.startTime")
+    @Query("SELECT dt FROM DoctorTimeslotEntity dt JOIN FETCH dt.day d WHERE dt.status = 1 AND dt.doctorId = :doctorId AND (dt.day.dayName = :dayName OR LOWER(dt.day.shortName) = LOWER(SUBSTRING(:dayName, 1, 3)) OR LOWER(dt.day.dayName) LIKE LOWER(CONCAT(SUBSTRING(:dayName, 1, 3), '%'))) ORDER BY dt.startTime")
     List<DoctorTimeslotEntity> findActiveTimeslotsByDoctorIdAndDayName(Long doctorId, String dayName);
 }

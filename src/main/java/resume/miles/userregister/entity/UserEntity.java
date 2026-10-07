@@ -43,6 +43,15 @@ public class UserEntity extends BaseEntity {
     @Column(name = "otp_expire")
     private LocalDateTime otpExpire;
 
+    @Column(name = "email_otp")
+    private Integer emailOtp;
+
+    @Column(name = "email_otp_expire")
+    private LocalDateTime emailOtpExpire;
+
+    @Column(name = "email_verified", columnDefinition = "boolean default false")
+    private Boolean emailVerified = false;
+
     @Column(name = "o_auth")
     private String oAuth;
 
@@ -62,5 +71,6 @@ public class UserEntity extends BaseEntity {
     @Column(name = "is_deleted", nullable = false)
     private Integer isDeleted;
 
-   
+    @Column(name = "fcm_token", columnDefinition = "TEXT")
+    private String fcmToken;
 }

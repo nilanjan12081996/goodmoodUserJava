@@ -14,6 +14,9 @@ public interface DoctorReviewRepository extends JpaRepository<DoctorReviewEntity
     @Query("SELECT COUNT(dr) FROM DoctorReviewEntity dr WHERE dr.doctorId = :doctorId AND dr.status = 1")
     Integer countActiveReviewsByDoctorId(@Param("doctorId") Long doctorId);
 
+    @Query("SELECT dr FROM DoctorReviewEntity dr WHERE dr.doctorId = :doctorId AND dr.userId = :userId AND dr.status = 1")
+    List<DoctorReviewEntity> findByDoctorIdAndUserId(@Param("doctorId") Long doctorId, @Param("userId") Long userId);
+
     @Query("SELECT AVG(dr.rating) FROM DoctorReviewEntity dr WHERE dr.doctorId = :doctorId AND dr.status = 1")
     Double findAverageRatingByDoctorId(@Param("doctorId") Long doctorId);
 

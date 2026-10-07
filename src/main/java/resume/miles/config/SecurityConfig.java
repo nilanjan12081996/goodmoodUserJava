@@ -52,6 +52,7 @@ public class SecurityConfig {
                             "/public/uploads/**" ,
                             "/api/resume/parse",
                             "/actuator/**",
+                            "/api/videocall/**",
                             "/api/user/posts/**"
 
                         ).permitAll()

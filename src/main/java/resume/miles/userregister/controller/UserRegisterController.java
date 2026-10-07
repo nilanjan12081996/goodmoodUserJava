@@ -142,6 +142,21 @@ public class UserRegisterController {
             }
     }
 
-   
-
+    @PatchMapping("/update-fcm-token")
+    public ResponseEntity<?> updateFcmToken(
+            @org.springframework.security.core.annotation.AuthenticationPrincipal resume.miles.config.JwtUserDetails userDetails,
+            @RequestBody Map<String, String> payload) {
+        
+        String fcmToken = payload.get("fcmToken");
+        if (fcmToken == null || fcmToken.trim().isEmpty()) {
+            return ResponseEntity.badRequest().body(Map.of("message", "FCM token is required", "status", false));
+        }
+        
+        try {
+            doctorService.updateFcmToken(userDetails.getId(), fcmToken);
+            return ResponseEntity.ok(Map.of("message", "FCM token updated successfully", "status", true));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("message", "Failed to update FCM token", "status", false));
+        }
+    }
 }

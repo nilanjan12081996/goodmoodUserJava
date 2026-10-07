@@ -19,4 +19,14 @@ public interface UserRepository extends JpaRepository<UserEntity,Long>,JpaSpecif
     @Transactional 
     @Query("UPDATE UserEntity d SET d.otp = :otp, d.otpExpire = :time WHERE d.id = :id")
     Long updateOtp(@Param("id") Long id,@Param("otp") Integer otp,@Param("time") LocalDateTime time );
+
+    @Modifying
+    @Transactional 
+    @Query("UPDATE UserEntity d SET d.emailOtp = :otp, d.emailOtpExpire = :time WHERE d.id = :id")
+    int updateEmailOtp(@Param("id") Long id,@Param("otp") Integer otp,@Param("time") LocalDateTime time );
+
+    @Modifying
+    @Transactional 
+    @Query("UPDATE UserEntity d SET d.emailVerified = :verified WHERE d.id = :id")
+    int updateEmailVerified(@Param("id") Long id, @Param("verified") Boolean verified);
 }

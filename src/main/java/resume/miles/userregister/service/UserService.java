@@ -20,22 +20,40 @@ public class UserService {
 
      private final FileService fileService;
      private final Msg91Service msg91Service;
+     private final EmailService emailService;
 
      
 
-     public UserService(UserRepository doctorRepository, OtpService otpService, FileService fileService,Msg91Service msg91Service){
+     public UserService(UserRepository doctorRepository, OtpService otpService, FileService fileService,Msg91Service msg91Service, EmailService emailService){
         this.doctorRepository = doctorRepository;
         this.otpService = otpService;
         this.fileService = fileService;
         this.msg91Service = msg91Service;
+        this.emailService = emailService;
      }
 
      @Transactional
      public String updateAvatar(Long userId, org.springframework.web.multipart.MultipartFile file) {
+         return updateAvatar(userId, file, null, null, null, null);
+     }
+
+     @Transactional
+     public String updateAvatar(Long userId, org.springframework.web.multipart.MultipartFile file, Integer cropX, Integer cropY, Integer cropWidth, Integer cropHeight) {
          UserEntity user = doctorRepository.findById(userId)
                  .orElseThrow(() -> new RuntimeException("User not found"));
          
-         String avatarUrl = fileService.storeFile(file);
+         String avatarUrl = fileService.storeFile(file, cropX, cropY, cropWidth, cropHeight);
+         user.setAvatar(avatarUrl);
+         doctorRepository.save(user);
+         return avatarUrl;
+     }
+
+     @Transactional
+     public String updateAvatarBase64(Long userId, String base64Data, String fileName, Integer cropX, Integer cropY, Integer cropWidth, Integer cropHeight) {
+         UserEntity user = doctorRepository.findById(userId)
+                 .orElseThrow(() -> new RuntimeException("User not found"));
+         
+         String avatarUrl = fileService.storeBase64(base64Data, fileName, cropX, cropY, cropWidth, cropHeight);
          user.setAvatar(avatarUrl);
          doctorRepository.save(user);
          return avatarUrl;
@@ -103,5 +121,31 @@ public class UserService {
         UserEntity entity=doctorRepository.findById(id)
         .orElseThrow(() -> new RuntimeException("User not found"));
         return UserMapper.toProfileDto(entity);
+     }
+
+     @Transactional
+     public void updateFcmToken(Long userId, String fcmToken) {
+         UserEntity user = doctorRepository.findById(userId)
+                 .orElseThrow(() -> new RuntimeException("User not found"));
+         user.setFcmToken(fcmToken);
+         doctorRepository.save(user);
+     }
+    public String sendEmailVerification(Long doctorId, String email) {
+         UserEntity doc = doctorRepository.findById(doctorId)
+                 .orElseThrow(() -> new RuntimeException("User not found"));
+         if (email == null || email.isEmpty()) {
+             throw new RuntimeException("Please provide an email address");
+         }
+         doc.setEmail(email);
+         doctorRepository.save(doc);
+
+         Integer otp = otpService.generateEmailOtp(doctorId);
+         emailService.sendOtpEmail(email, otp);
+         return "OTP sent successfully to your email.";
+     }
+
+     public String verifyEmail(Long doctorId, Integer otp) {
+         otpService.verifyEmailOtp(doctorId, otp);
+         return "Email verified successfully.";
      }
 }

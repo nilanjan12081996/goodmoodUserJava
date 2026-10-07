@@ -36,5 +36,29 @@ public class OtpService {
         UserDto data = UserMapper.toDto(doc);
         return data;
      }
-     
+
+     @Transactional
+     public Integer generateEmailOtp(Long id) {
+         Integer otp = new Random().nextInt(900000) + 100000;
+         LocalDateTime time = LocalDateTime.now().plusMinutes(5);
+         doctorRepository.updateEmailOtp(id, otp, time);
+         return otp;
+     }
+
+     @Transactional
+     public boolean verifyEmailOtp(Long id, Integer otp) {
+         UserEntity doc = doctorRepository.findById(id)
+                 .orElseThrow(() -> new RuntimeException("User not found with ID: " + id));
+
+         if (doc.getEmailOtp() == null || !doc.getEmailOtp().equals(otp)) {
+             throw new RuntimeException("Invalid OTP");
+         }
+
+         if (doc.getEmailOtpExpire() == null || LocalDateTime.now().isAfter(doc.getEmailOtpExpire())) {
+             throw new RuntimeException("OTP has expired");
+         }
+
+         doctorRepository.updateEmailVerified(id, true);
+         return true;
+     }
 }

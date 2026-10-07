@@ -11,6 +11,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import resume.miles.doctorlist.entity.AppointmentPatientEntity;
 import resume.miles.doctorlist.repository.AppointmentPatientRepository;
+import resume.miles.doctorlist.repository.DoctorAppointmentRepository;
 import resume.miles.payment.dto.CreadDto;
 import org.springframework.data.jpa.domain.Specification;
 import resume.miles.payment.dto.*;
@@ -34,6 +35,8 @@ public class TransactionService {
     private final TransactionRepository transactionRepository;
 
     private final AppointmentPatientRepository appointmentPatientRepository;
+    private final DoctorAppointmentRepository doctorAppointmentRepository;
+    private final resume.miles.doctorlist.service.AppointmentEmailService appointmentEmailService;
 
     @Value("${razorpay.key.id}")
     private String razorpayKeyId;
@@ -45,8 +48,14 @@ public class TransactionService {
 
         Optional<TransactionEntity> existingPendingTxn = transactionRepository
                 .findFirstByAppointmentIdAndTransactionStatus(detailsDto.getAppointmentId(), "PENDING");
-        Optional<AppointmentPatientEntity> appointmentPatient = appointmentPatientRepository.findById(detailsDto.getAppointmentId());
-        if(appointmentPatient.isEmpty()) {
+        
+        Long apptId = detailsDto.getAppointmentId();
+        boolean exists = (apptId != null) && (
+                doctorAppointmentRepository.existsById(apptId)
+                || appointmentPatientRepository.findByAppointmentId(apptId).isPresent()
+                || appointmentPatientRepository.existsById(apptId)
+        );
+        if (!exists) {
             throw new RuntimeException("Appointment Not Found");
         }
         if (existingPendingTxn.isPresent()) {
@@ -116,6 +125,13 @@ public class TransactionService {
         }
         transaction.setTransactionStatus("SUCCESS");
         transaction.setTransactionCode(verificationDto.getRazorpayPaymentId());
+        
+        try {
+            appointmentEmailService.sendAppointmentConfirmationEmailsAsync(verificationDto.getAppointmentId());
+        } catch (Exception e) {
+            System.err.println("Failed to trigger email confirmation on verifyPayment: " + e.getMessage());
+        }
+
         return fristSave(transaction);
     }
 

@@ -8,11 +8,14 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 public class MvcConfig implements WebMvcConfigurer {
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
-        // This maps the URL "/uploads/**" directly to the physical file path on your server
+        // Maps "/uploads/**" to both user uploads and doctor uploads
         registry.addResourceHandler("/uploads/**")
-                .addResourceLocations("file:./src/main/resources/static/uploads/"); 
-                // NOTE: Using "file:./src/..." works if you run the jar from the project root.
-                // If that fails, use the FULL ABSOLUTE PATH from your screenshot:
-                // .addResourceLocations("file:/htdocs/goodmoodnodeadminapi.goodmood.solutions/src/main/resources/static/uploads/");
+                .addResourceLocations(
+                        "file:./uploads/",
+                        "file:./src/main/resources/static/uploads/",
+                        "file:../goodmoodDoctorJava/src/main/resources/static/uploads/",
+                        "file:/htdocs/goodmoodjavadoctorapi.goodmood.solutions/src/main/resources/static/uploads/",
+                        "file:/htdocs/goodmoodnodeadminapi.goodmood.solutions/src/main/resources/static/uploads/"
+                ); 
     }
 }
