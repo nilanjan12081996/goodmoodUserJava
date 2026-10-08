@@ -45,6 +45,17 @@ public class TransactionEntity {
     @Column(name = "transaction_status", nullable = false)
     private String transactionStatus;
 
+    @Column(name = "is_paid")
+    private Integer isPaid;
+
+    public Integer getIsPaid() {
+        return isPaid;
+    }
+
+    public void setIsPaid(Integer isPaid) {
+        this.isPaid = isPaid;
+    }
+
     @CreationTimestamp
     @Column(name = "created_at", updatable = false)
     private LocalDateTime createdAt;

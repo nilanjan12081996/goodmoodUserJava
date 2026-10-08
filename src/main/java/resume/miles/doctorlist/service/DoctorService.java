@@ -42,6 +42,7 @@ import java.time.format.TextStyle;
 import java.util.*;
 import java.util.stream.Collectors;
 
+import resume.miles.payment.repository.TransactionRepository;
 import resume.miles.config.firebase.FcmService;
 
 @Service
@@ -58,6 +59,7 @@ public class DoctorService {
     private final SupportCategoryRepository supportCategoryRepository;
     private final FcmService fcmService;
     private final AppointmentEmailService appointmentEmailService;
+    private final TransactionRepository transactionRepository;
 
     public DoctorService(DoctorRepository doctorRepository, 
                          DoctorTimeslotRepository doctorTimeslotRepository,
@@ -69,7 +71,8 @@ public class DoctorService {
                          UserRepository userRepository,
                          SupportCategoryRepository supportCategoryRepository,
                          FcmService fcmService,
-                         AppointmentEmailService appointmentEmailService) {
+                         AppointmentEmailService appointmentEmailService,
+                         TransactionRepository transactionRepository) {
         this.doctorRepository = doctorRepository;
         this.doctorTimeslotRepository = doctorTimeslotRepository;
         this.doctorSlotTimingRepository = doctorSlotTimingRepository;
@@ -81,6 +84,7 @@ public class DoctorService {
         this.supportCategoryRepository = supportCategoryRepository;
         this.fcmService = fcmService;
         this.appointmentEmailService = appointmentEmailService;
+        this.transactionRepository = transactionRepository;
     }
 
 //    @Transactional(readOnly = true)
@@ -463,6 +467,22 @@ public class DoctorService {
             LocalTime apptStart = appt.getTimeonly();
             LocalTime apptEnd = parseEndTimeFromSlot(appt.getTimeSlot(), apptStart.plusMinutes(slotDuration));
             if (startTime.isBefore(apptEnd) && endTime.isAfter(apptStart)) {
+                // If it is the SAME user who booked this exact slot and it's not yet completed/paid, resume it!
+                if (appt.getUserId().equals(dto.getUserId()) && apptStart.equals(startTime) && (appt.getIsComplete() == null || appt.getIsComplete() == 0)) {
+                    boolean isAlreadyPaid = transactionRepository.findByAppointmentId(appt.getId())
+                            .stream()
+                            .anyMatch(t -> "SUCCESS".equalsIgnoreCase(t.getTransactionStatus()) || (t.getIsPaid() != null && t.getIsPaid() == 1));
+                    if (!isAlreadyPaid) {
+                        Map<String, Object> response = new LinkedHashMap<>();
+                        response.put("success", true);
+                        response.put("message", "Appointment slot resumed for payment");
+                        response.put("data", Map.of(
+                            "id", appt.getId(),
+                            "appointmentId", appt.getId()
+                        ));
+                        return response;
+                    }
+                }
                 return getAvailabilityResponse(dto, "The doctor is already booked for this slot.");
             }
         }
@@ -473,6 +493,21 @@ public class DoctorService {
             LocalTime apptStart = appt.getTimeonly();
             LocalTime apptEnd = parseEndTimeFromSlot(appt.getTimeSlot(), apptStart.plusMinutes(slotDuration));
             if (startTime.isBefore(apptEnd) && endTime.isAfter(apptStart)) {
+                if (appt.getId() != null && appt.getDoctorId().equals(dto.getDoctorId()) && apptStart.equals(startTime) && (appt.getIsComplete() == null || appt.getIsComplete() == 0)) {
+                    boolean isAlreadyPaid = transactionRepository.findByAppointmentId(appt.getId())
+                            .stream()
+                            .anyMatch(t -> "SUCCESS".equalsIgnoreCase(t.getTransactionStatus()) || (t.getIsPaid() != null && t.getIsPaid() == 1));
+                    if (!isAlreadyPaid) {
+                        Map<String, Object> response = new LinkedHashMap<>();
+                        response.put("success", true);
+                        response.put("message", "Appointment slot resumed for payment");
+                        response.put("data", Map.of(
+                            "id", appt.getId(),
+                            "appointmentId", appt.getId()
+                        ));
+                        return response;
+                    }
+                }
                 return getAvailabilityResponse(dto, "You already have another appointment at this same time.");
             }
         }

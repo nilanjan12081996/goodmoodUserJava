@@ -45,6 +45,7 @@ public class SecurityConfig {
                             "/api/health-check",
                             "/error",
                             "/api/admin/login",
+                            "/api/user/register",
                             "/api/user/register/**",
                             "/public/**",                   
                             "/static/**",   
