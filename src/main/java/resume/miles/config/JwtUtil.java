@@ -65,6 +65,8 @@ public class JwtUtil {
             claims.put("phone",doctorDto.getMobile());
             claims.put("status",doctorDto.getStatus());
             claims.put("isdeleted",doctorDto.getIsDeleted());
+            claims.put("tokenType", "USER");
+            claims.put("role", "USER");
         return createToken(claims, doctorDto.getMobile());
     }
 
