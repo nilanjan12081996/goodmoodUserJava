@@ -63,9 +63,9 @@ public class AwarenessServiceQA {
         List<QuestionDTO> questions = new ArrayList<>(questionList);
         Collections.shuffle(questions);
 
-        // Step 5: Return only 5 random questions
+        // Step 5: Return only 10 random questions
         List<QuestionDTO> limitedQuestions = questions.stream()
-                .limit(5)
+                .limit(10)
                 .toList();
 
         return AwarenessQuestionResponseDTO.builder()
