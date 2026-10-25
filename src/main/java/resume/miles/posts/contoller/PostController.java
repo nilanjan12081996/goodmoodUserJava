@@ -23,11 +23,15 @@ public class PostController {
    public ResponseEntity<Map<String, Object>> getAllpost(){
     try {
          List<PostDto> data = postService.getAllPost();
+         boolean active = postService.isPsychiatricInsightsActive();
+         String title = postService.getPsychiatricInsightsTitle();
          return ResponseEntity.status(200).body(Map.of(
             "message","post fetch successfully",
             "status",true,
             "statusCode",200,
-            "posts",data
+            "posts",data,
+            "active",active,
+            "title",title != null ? title : "Psychiatric Insights"
          ));
     } catch (Exception e) {
         return ResponseEntity.status(400).body(Map.of(
