@@ -91,6 +91,7 @@ public class UserMapper {
                 .email(entity.getEmail())
                 .mobile(entity.getMobile())
                 .avatar(entity.getAvatar())
+                .emailVerified(entity.getEmailVerified())
                 .build();
     }
     

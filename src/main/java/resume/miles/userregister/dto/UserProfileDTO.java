@@ -19,4 +19,5 @@ public class UserProfileDTO {
     private String email;
     private String mobile;
     private String avatar;
+    private Boolean emailVerified;
 }

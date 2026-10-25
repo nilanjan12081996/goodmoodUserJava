@@ -341,13 +341,42 @@ public class DoctorService {
                 .and(DoctorReviewSpecification.isActive());
         
         return doctorReviewRepository.findAll(spec).stream()
-                .map(review -> DoctorReviewDTO.builder()
-                        .id(review.getId())
-                        .rating(review.getRating())
-                        .text(review.getReviewText())
-                        .userName("User " + review.getUserId())
-                        .date(review.getCreatedAt() != null ? review.getCreatedAt().format(DateTimeFormatter.ofPattern("MMM dd, yyyy")) : null)
-                        .build())
+                .map(review -> {
+                    UserEntity user = review.getUser();
+                    if (user == null && review.getUserId() != null) {
+                        user = userRepository.findById(review.getUserId()).orElse(null);
+                    }
+
+                    String name = null;
+                    String avatar = null;
+
+                    if (user != null) {
+                        String first = user.getFirstName() != null ? user.getFirstName().trim() : "";
+                        String last = user.getLastName() != null ? user.getLastName().trim() : "";
+                        String fullName = (first + " " + last).trim();
+
+                        if (!fullName.isEmpty()) {
+                            name = fullName;
+                        } else if (user.getUsername() != null && !user.getUsername().trim().isEmpty() && !user.getUsername().startsWith("goodmoodUser+")) {
+                            name = user.getUsername().trim();
+                        }
+                        avatar = user.getAvatar();
+                    }
+
+                    if (name == null || name.isEmpty()) {
+                        name = "User " + (review.getUserId() != null ? review.getUserId() : "");
+                    }
+
+                    return DoctorReviewDTO.builder()
+                            .id(review.getId())
+                            .userId(review.getUserId())
+                            .userName(name)
+                            .userAvatar(avatar)
+                            .rating(review.getRating())
+                            .text(review.getReviewText())
+                            .date(review.getCreatedAt() != null ? review.getCreatedAt().format(DateTimeFormatter.ofPattern("MMM dd, yyyy")) : null)
+                            .build();
+                })
                 .collect(Collectors.toList());
     }
 
