@@ -29,6 +29,7 @@ public class UserDto {
     private Integer isDeleted;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private Boolean isTester;
 
    
 }

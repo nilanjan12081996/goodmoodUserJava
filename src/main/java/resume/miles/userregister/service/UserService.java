@@ -66,6 +66,22 @@ public class UserService {
          return user.getAvatar();
      }
 
+     @Transactional
+     public void updateTesterStatus(Long userId, Boolean isTester) {
+         UserEntity user = doctorRepository.findById(userId)
+                 .orElseThrow(() -> new RuntimeException("User not found"));
+         user.setIsTester(Boolean.TRUE.equals(isTester));
+         doctorRepository.save(user);
+     }
+
+     @Transactional
+     public void updateTesterStatusByMobile(String mobile, Boolean isTester) {
+         UserEntity user = doctorRepository.findByMobile(mobile)
+                 .orElseThrow(() -> new RuntimeException("User not found with mobile: " + mobile));
+         user.setIsTester(Boolean.TRUE.equals(isTester));
+         doctorRepository.save(user);
+     }
+
      public Map<String, Object> register(String mobile){
         
         UserEntity doctorData = doctorRepository.findByMobile(mobile)

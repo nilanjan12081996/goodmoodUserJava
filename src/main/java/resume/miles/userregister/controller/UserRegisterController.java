@@ -3,16 +3,16 @@ package resume.miles.userregister.controller;
 import java.util.Map;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-
 import resume.miles.config.JwtUtil;
+import resume.miles.systemsetting.service.SystemSettingService;
 import resume.miles.userregister.dto.UserDto;
-
 import resume.miles.userregister.service.UserService;
 import resume.miles.userregister.service.OtpService;
 
@@ -21,15 +21,79 @@ import resume.miles.userregister.service.OtpService;
 public class UserRegisterController {
 
     private final UserService doctorService;
-
     private final JwtUtil jwtUtills;
-
     private final OtpService otpService;
+    private final SystemSettingService systemSettingService;
 
-    public UserRegisterController(UserService doctorService,JwtUtil jwtUtills,OtpService otpService) {
+    public UserRegisterController(UserService doctorService, JwtUtil jwtUtills, OtpService otpService, SystemSettingService systemSettingService) {
         this.doctorService = doctorService;
         this.jwtUtills = jwtUtills;
-        this.otpService =otpService;
+        this.otpService = otpService;
+        this.systemSettingService = systemSettingService;
+    }
+
+    @GetMapping("/app-status")
+    public ResponseEntity<?> getAppStatus(
+            @org.springframework.security.core.annotation.AuthenticationPrincipal resume.miles.config.JwtUserDetails userDetails) {
+        boolean maintenance = systemSettingService.isMaintenanceMode();
+        boolean isTester = false;
+        if (userDetails != null && userDetails.getId() != null) {
+            isTester = systemSettingService.isTesterUserId(userDetails.getId());
+        }
+
+        boolean isBlocked = maintenance && !isTester;
+
+        return ResponseEntity.ok(Map.of(
+            "maintenance", isBlocked,
+            "rawMaintenanceMode", maintenance,
+            "isTester", isTester,
+            "message", maintenance ? systemSettingService.getMaintenanceMessage() : "Service operational",
+            "status", true,
+            "statusCode", 200
+        ));
+    }
+
+    @PostMapping("/maintenance-toggle")
+    public ResponseEntity<?> toggleMaintenance(@RequestBody Map<String, Object> payload) {
+        Boolean enabled = (Boolean) payload.get("enabled");
+        String message = (String) payload.get("message");
+        if (enabled == null) {
+            enabled = !systemSettingService.isMaintenanceMode();
+        }
+        systemSettingService.setMaintenanceMode(enabled, message);
+        return ResponseEntity.ok(Map.of(
+            "status", true,
+            "statusCode", 200,
+            "maintenanceMode", enabled,
+            "message", "Maintenance mode updated successfully"
+        ));
+    }
+
+    @PostMapping("/set-user-tester")
+    public ResponseEntity<?> setUserTesterStatus(@RequestBody Map<String, Object> payload) {
+        Object userIdObj = payload.get("userId");
+        String mobile = (String) payload.get("mobile");
+        Boolean isTester = (Boolean) payload.get("isTester");
+
+        if (isTester == null) {
+            isTester = true;
+        }
+
+        if (userIdObj != null) {
+            Long userId = Long.valueOf(userIdObj.toString());
+            doctorService.updateTesterStatus(userId, isTester);
+        } else if (mobile != null && !mobile.trim().isEmpty()) {
+            doctorService.updateTesterStatusByMobile(mobile.trim(), isTester);
+        } else {
+            return ResponseEntity.badRequest().body(Map.of("status", false, "message", "userId or mobile is required"));
+        }
+
+        return ResponseEntity.ok(Map.of(
+            "status", true,
+            "statusCode", 200,
+            "isTester", isTester,
+            "message", "User tester status updated successfully"
+        ));
     }
 
     @PostMapping
@@ -42,6 +106,21 @@ public class UserRegisterController {
                     "status", false
                 ));
             }
+
+            // Check Maintenance Mode
+            if (systemSettingService.isMaintenanceMode()) {
+                boolean isTester = systemSettingService.isTesterMobile(mobileNumber.trim());
+                if (!isTester) {
+                    return ResponseEntity.status(503).body(Map.of(
+                        "message", systemSettingService.getMaintenanceMessage(),
+                        "maintenance", true,
+                        "isTester", false,
+                        "statusCode", 503,
+                        "status", false
+                    ));
+                }
+            }
+
             try{
                 Map<String, Object> data = doctorService.register(mobile.get("mobile"));
                 return ResponseEntity.status(200).body(Map.of(

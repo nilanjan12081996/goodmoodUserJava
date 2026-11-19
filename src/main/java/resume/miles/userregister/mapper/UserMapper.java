@@ -31,6 +31,7 @@ public class UserMapper {
                 .status(entity.getStatus())
               
                 .isDeleted(entity.getIsDeleted())
+                .isTester(entity.getIsTester())
                 .createdAt(entity.getCreatedAt())
                 .updatedAt(entity.getUpdatedAt())
                 .build();

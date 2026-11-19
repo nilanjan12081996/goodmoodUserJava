@@ -73,4 +73,8 @@ public class UserEntity extends BaseEntity {
 
     @Column(name = "fcm_token", columnDefinition = "TEXT")
     private String fcmToken;
+
+    @Builder.Default
+    @Column(name = "is_tester", columnDefinition = "boolean default false")
+    private Boolean isTester = false;
 }
